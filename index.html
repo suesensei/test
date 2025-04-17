@@ -190,7 +190,7 @@ function addArticle(word) {
       }
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
+    window.onload = () => {
       document.getElementById("practiceBtn").addEventListener("click", () => startGame("practice"));
       document.getElementById("trialBtn").addEventListener("click", () => startGame("trial"));
 
