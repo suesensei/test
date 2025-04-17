@@ -191,8 +191,8 @@ function addArticle(word) {
     }
 
     window.onload = () => {
-      document.getElementById("practiceBtn").addEventListener("click", () => startGame("practice"));
-      document.getElementById("trialBtn").addEventListener("click", () => startGame("trial"));
+      document.getElementById("practiceBtn").addEventListener("click", () => { console.log("Practice clicked"); startGame("practice"); });
+      document.getElementById("trialBtn").addEventListener("click", () => { console.log("Trial clicked"); startGame("trial"); });
 
       const sel = document.getElementById("categorySelect");
       const categories = ["Food", "Animals", "School", "Family", "Clothes", "Colors", "Numbers", "Weather", "Actions", "Feelings"];
