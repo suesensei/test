@@ -1,10 +1,11 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Picture‑Word Match</title>
-  <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Picture‑Word Match</title>
+<style>
     * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
     body { margin: 0; background: #f0f8ff; }
     #container { display: flex; flex-direction: column; align-items: center; padding: 20px; }
@@ -34,28 +35,28 @@
   </style>
 </head>
 <body>
-  <div id="container">
-    <div id="startScreen">
-      <h1>Picture‑Word Match</h1>
-      <div id="modeBtns">
-        <button id="practiceBtn">Practice Mode</button>
-        <button id="trialBtn">30‑Set Trial Mode</button>
-      </div>
-    </div>
-    <div id="gameScreen" style="display:none; width:100%; flex-direction:column; align-items:center;">
-      <div id="gameControls">
-        <select id="categorySelect"></select>
-        <button id="startCategoryBtn">Start</button>
-        <button id="backBtn">Back</button>
-        <span id="timer" style="display:none; margin-left: 20px; font-weight: bold; font-size: 1.2rem; color: #d32f2f;"></span>
-      </div>
-      <div id="gameArea">
-        <div id="imageArea" class="area"></div>
-        <div id="wordArea" class="area"></div>
-      </div>
-    </div>
-  </div>
-  <script>
+<div id="container">
+<div id="startScreen">
+<h1>Picture‑Word Match</h1>
+<div id="modeBtns">
+<button id="practiceBtn">Practice Mode</button>
+<button id="trialBtn">30‑Set Trial Mode</button>
+</div>
+</div>
+<div id="gameScreen" style="display:none; width:100%; flex-direction:column; align-items:center;">
+<div id="gameControls">
+<select id="categorySelect"></select>
+<button id="startCategoryBtn">Start</button>
+<button id="backBtn">Back</button>
+<span id="timer" style="display:none; margin-left: 20px; font-weight: bold; font-size: 1.2rem; color: #d32f2f;"></span>
+</div>
+<div id="gameArea">
+<div class="area" id="imageArea"></div>
+<div class="area" id="wordArea"></div>
+</div>
+</div>
+</div>
+<script>
     function buildBoard(mode) {
       const imageArea = document.getElementById("imageArea");
       const wordArea = document.getElementById("wordArea");
@@ -246,9 +247,7 @@ function addArticle(word) {
       }, 500);
     }
   </script>
-
-<script>
-let touchCard = null;
+<script>let touchCard = null;
 
 document.addEventListener('touchstart', e => {
   const target = e.target.closest('.word-card');
@@ -299,8 +298,6 @@ document.addEventListener('touchend', e => {
   }
   touchCard.remove();
   touchCard = null;
-});
-</script>
-
+});</script>
 </body>
 </html>
