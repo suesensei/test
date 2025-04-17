@@ -119,25 +119,35 @@ let currentCat = "Food";
 
 let availableVoices = [];
 
-function loadVoices() {
-  availableVoices = speechSynthesis.getVoices();
-}
-if ('speechSynthesis' in window) {
-  loadVoices();
-  if (speechSynthesis.onvoiceschanged !== undefined) {
-    speechSynthesis.onvoiceschanged = loadVoices;
-  }
+function initVoices() {
+  return new Promise(resolve => {
+    const voices = speechSynthesis.getVoices();
+    if (voices.length) {
+      availableVoices = voices;
+      resolve();
+    } else {
+      speechSynthesis.onvoiceschanged = () => {
+        availableVoices = speechSynthesis.getVoices();
+        resolve();
+      };
+    }
+  });
 }
 
-function speak(text) {
-  if ('speechSynthesis' in window) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
-    const enVoice = availableVoices.find(v => v.lang === 'en-US' || v.lang.startsWith('en'));
-    if (enVoice) utterance.voice = enVoice;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(utterance);
-  }
+async function speak(text) {
+  if (!('speechSynthesis' in window)) return;
+
+  await initVoices();  // 確実にvoiceをロードしてから再生
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'en-US';
+
+  const enVoice = availableVoices.find(v => v.lang === 'en-US' || v.lang.startsWith('en'));
+  if (enVoice) utterance.voice = enVoice;
+
+  speechSynthesis.cancel();  // キューの音声をリセット
+  speechSynthesis.speak(utterance);
+}
 }
 
 function addArticle(word) {
