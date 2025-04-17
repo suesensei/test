@@ -117,10 +117,24 @@ shuffledWords2.forEach(word => {
     let draggedWord = null;
 let currentCat = "Food";
 
+let availableVoices = [];
+
+function loadVoices() {
+  availableVoices = speechSynthesis.getVoices();
+}
+if ('speechSynthesis' in window) {
+  loadVoices();
+  if (speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = loadVoices;
+  }
+}
+
 function speak(text) {
   if ('speechSynthesis' in window) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
+    const enVoice = availableVoices.find(v => v.lang === 'en-US' || v.lang.startsWith('en'));
+    if (enVoice) utterance.voice = enVoice;
     speechSynthesis.cancel();
     speechSynthesis.speak(utterance);
   }
