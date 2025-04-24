@@ -1,312 +1,311 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=UD+Digi+Kyokasho+N+R&display=swap">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Picture‑Word Match</title>
+  <title>大文字小文字マッチングゲーム</title>
   <style>
-    * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
-    body { margin: 0; background: #f0f8ff; }
-    #container { display: flex; flex-direction: column; align-items: center; padding: 20px; }
-    h1 { margin-bottom: 20px; }
-    button { cursor: pointer; border: none; border-radius: 8px; padding: 10px 18px; font-size: 1rem; background: #2196f3; color: #fff; }
-    #modeBtns { display: flex; gap: 20px; }
-    #gameControls { display: flex; gap: 12px; margin-bottom: 16px; justify-content: center; width: 100%; padding: 10px; flex-wrap: wrap; }
-    #timer { font-weight: bold; font-size: 1.1rem; color: #d32f2f; }
-    #gameArea { display: flex; width: 100%; max-width: 1200px; }
-    #gameArea.horizontal { flex-wrap: nowrap; }
-    .area { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 50%; padding: 0 10px; }
-    .img-card, .word-card { width: 100%; height: 100px; border-radius: 12px; display: flex; align-items: center; justify-content: center; user-select: none; touch-action: none; transition: transform .25s; }
-    .img-card { font-size: 2.2rem; background: #fff3e0; border: 3px solid #ffb74d; }
-    .word-card { font-size: .9rem; background: #e3f2fd; border: 3px solid #64b5f6; cursor: grab; padding: 6px; text-align: center; line-height: 1.15; }
-    .matched { opacity: .35; cursor: default; }
-    @keyframes flash { from { background: #c8e6c9; } to { background: #fff3e0; } }
-    @keyframes shake { 10%,90%{transform:translateX(-4px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-4px)}40%,60%{transform:translateX(4px)} }
-    .correct-anim { animation: flash .3s ease-out; }
-    .wrong-anim { animation: shake .35s ease-in-out; }
-    @media (max-width: 480px) {
-      #gameArea { flex-wrap: wrap; }
-      .area { width: 100%; max-width: 100%; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-      .img-card, .word-card { height: 80px; }
-      .img-card { font-size: 1.8rem; }
-      .word-card { font-size: .75rem; padding: 4px; }
+    body {
+      background-image: url('bc1.jpg');
+      background-size: contain;
+      background-position: top center;
+      background-repeat: no-repeat;
+      font-family: 'UD Digi Kyokasho N-R', sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      background-color: #fffaf8;
     }
+    .game {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .game-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .card {
+      width: 60px;
+      height: 80px;
+      background-color: #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+      border-radius: 8px;
+      border: 2px solid #888;
+    }
+    .card.upper {
+      background-image: url('red.png');
+      background-size: cover;
+      background-position: center;
+      background-color: #fdd;
+      color: #000;
+    }
+    .card.lower {
+      background-image: url('green.png');
+      background-size: cover;
+      background-position: center;
+      background-color: #dfd;
+      color: #000;
+    }
+    .matched {
+      pointer-events: none;
+      visibility: hidden;
+    }
+    #controls {
+      margin: 20px auto;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 10px 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      text-align: center;
+    }
+    #score, #timer, #mistakes {
+      font-size: 18px;
+      margin: 0 10px;
+    }
+    #restartBtn {
+      display: none;
+      margin-top: 20px;
+      font-size: 16px;
+      padding: 8px 16px;
+    }
+      @media (max-width: 600px) {
+      .card {
+        width: 38px;
+        height: 52px;
+        font-size: 20px;
+        font-weight: bold;
+        border-radius: 6px;
+      }
+      }
   </style>
 </head>
 <body>
-  <div id="container">
-    <div id="startScreen">
-      <h1>Picture‑Word Match</h1>
-      <div id="modeBtns">
-        <button id="practiceBtn">Practice Mode</button>
-        <button id="trialBtn">30‑Set Trial Mode</button>
-      </div>
-    </div>
-    <div id="gameScreen" style="display:none; width:100%; flex-direction:column; align-items:center;">
-      <div id="gameControls">
-        <select id="categorySelect"></select>
-        <button id="startCategoryBtn">Start</button>
-        <button id="backBtn">Back</button>
-        <span id="timer" style="display:none; margin-left: 20px; font-weight: bold; font-size: 1.2rem; color: #d32f2f;"></span>
-      </div>
-      <div id="gameArea">
-        <div id="imageArea" class="area"></div>
-        <div id="wordArea" class="area"></div>
-      </div>
-    </div>
+  <h1 style="background: rgba(255,255,255,0.9); padding: 12px 24px; border-radius: 16px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); font-size: 28px; color: #3f51b5; font-weight: bold; font-family: 'UD Digi Kyokasho N-R', sans-serif;">大文字・小文字 マッチングゲーム</h1>
+  <div id="controls">
+    <button onclick="startGame()" style="background-color: #ffcc00; color: #000; font-weight: bold; padding: 10px 20px; border: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 18px; cursor: pointer;">スタート</button>
+    <button onclick="togglePause()" id="pauseBtn">一時停止</button>
+    
+    <div id="timer" style="background: rgba(255,255,255,0.8); padding: 6px 12px; border-radius: 8px; font-weight: bold; color: #333;">タイム: 0 秒</div>
+    <div id="mistakes" style="background: rgba(255,255,255,0.8); padding: 6px 12px; border-radius: 8px; font-weight: bold; color: #333;">ミス: 0 / 5</div>
   </div>
+  <button id="restartBtn" onclick="startGame()">再スタート</button>
+  <div class="game">
+    <div class="game-row" id="upperRow"></div>
+    <div class="game-row" id="lowerRow"></div>
+  </div>
+
+  <audio id="letterAudio"></audio>
+  <audio id="pinponAudio" src="pinpon.mp3"></audio>
+
   <script>
-    function buildBoard(mode) {
-      const imageArea = document.getElementById("imageArea");
-      const wordArea = document.getElementById("wordArea");
-      imageArea.innerHTML = "";
-      wordArea.innerHTML = "";
-      const allWordsByCategory = {
-        Food: ["apple", "bread", "milk", "rice", "egg", "apples", "eggs"],
-        Animals: ["dog", "cat", "bird", "elephant", "dogs", "cats", "birds", "fish", "elephants"],
-        School: ["book", "pen", "pencil", "chair", "bag", "books", "pens", "pencils", "chairs", "bags"],
-        Family: ["mother", "father", "sister", "brother", "grandpa"],
-        Clothes: ["shirt", "shirts", "pants", "shoes", "coat", "coats", "hat", "hats"],
-        Colors: ["red", "blue", "green", "yellow", "black", "white", "orange", "purple", "brown"],
-        Numbers: ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"],
-        Weather: ["sunny", "rainy", "windy", "cloudy", "snowy"],
-        Actions: ["I sleep.", "I run.", "I drink juice.", "I brush my teeth.", "I eat sushi."],
-        Feelings: ["I am happy.", "I am sad.", "I am tired.", "I am hungry.", "I am angry."]
-      };
-      const allWords = Object.values(allWordsByCategory).flat();
-      const words = mode === "trial"
-        ? allWords.sort(() => 0.5 - Math.random()).slice(0, 30)
-        : allWordsByCategory[document.getElementById("categorySelect").value];
-      const shuffledWords = [...words].sort(() => 0.5 - Math.random());
-shuffledWords.forEach(word => {
-        const img = document.createElement("div");
-        img.className = "img-card";
-        const emojiMap = {
-  apple: "🍎", apples: "🍎🍎", bread: "🍞", milk: "🥛", rice: "🍚", egg: "🥚", eggs: "🥚🥚",
-  dog: "🐶", dogs: "🐶🐶", cat: "🐱", cats: "🐱🐱", bird: "🐦", birds: "🐦🐦",  elephant: "🐘", elephants: "🐘🐘",
-  book: "📕", books: "📕📕", pen: "🖊️", pens: "🖊️🖊️", pencil: "✏️", pencils: "✏️✏️", chair: "🪑", chairs: "🪑🪑", bag: "🎒", bags: "🎒🎒",
-  mother: "👩", father: "👨", sister: "👧", brother: "👦", grandpa: "👴",
-  shirt: "👕", shirts: "👕👕", pants: "👖", shoes: "👟👟", coat: "🧥", coats: "🧥🧥", hat: "🎩", hats: "🎩🎩",
-  red: "🟥", blue: "🟦", green: "🟩", yellow: "🟨", black: "⬛", white: "⬜", orange: "🟧", purple: "🟪", brown: "🟫",
-  one: "1️⃣", two: "2️⃣", three: "3️⃣", four: "4️⃣", five: "5️⃣", six: "6️⃣", seven: "7️⃣", eight: "8️⃣", nine: "9️⃣", ten: "🔟", eleven: "1️⃣1️⃣", twelve: "1️⃣2️⃣",
-  sunny: "☀️", rainy: "🌧️", windy: "🌬️", cloudy: "☁️", snowy: "❄️",
-  "I sleep.": "😴", "I run.": "🏃", "I drink juice.": "🧃", "I brush my teeth.": "🪥🦷", "I eat sushi.": "🍣🥢",
-  "I am happy.": "😊", "I am sad.": "😢", "I am tired.": "🥱", "I am hungry.": "🤤", "I am angry.": "😠"
-};
-img.textContent = emojiMap[word] || word;
-        img.dataset.word = word;
-        img.addEventListener("dragover", e => e.preventDefault());
-        img.addEventListener("drop", handleDrop);
-        imageArea.appendChild(img);
-      });
-      const shuffledWords2 = [...words].sort(() => 0.5 - Math.random());
-shuffledWords2.forEach(word => {
-        const card = document.createElement("div");
-        card.className = "word-card";
-        card.textContent = addArticle(word);
-        card.dataset.word = word;
-        card.draggable = true;
-        card.addEventListener("dragstart", e => {
-  draggedWord = e.target.dataset.word;
-  speak(addArticle(word));
-});
-        wordArea.appendChild(card);
-      });
+    const upperRow = document.getElementById('upperRow');
+    const lowerRow = document.getElementById('lowerRow');
+        const timerDisplay = document.getElementById('timer');
+    const mistakeDisplay = document.getElementById('mistakes');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const letterAudio = document.getElementById('letterAudio');
+
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let cards = [];
+    let firstCard = null;
+    let lock = false;
+        let timer = 0;
+    let intervalId = null;
+    let paused = false;
+    let mistakes = 0;
+    let messagePlayed = false;
+    const maxMistakes = 5;
+    const bgImages = [
+      'https://cdn.pixabay.com/photo/2017/04/13/21/29/kids-2223656_1280.jpg',
+      'https://cdn.pixabay.com/photo/2021/06/23/06/53/dinosaur-6357831_1280.jpg',
+      'https://cdn.pixabay.com/photo/2016/05/31/18/54/cartoon-1428435_1280.png'
+    ];
+
+    function playLetterSound(letter) {
+      letter = letter.toLowerCase();
+      letterAudio.src = `${letter}.mp3`;
+      letterAudio.play();
     }
 
-    let draggedWord = null;
-let currentCat = "Food";
+    function speak(text, lang = 'en-US') {
+      const msg = new SpeechSynthesisUtterance(text);
+      msg.lang = lang;
+      const voices = speechSynthesis.getVoices();
+      const voice = voices.find(v => v.lang === lang);
+      if (voice) {
+        msg.voice = voice;
+      }
+      window.speechSynthesis.speak(msg);
+    }
 
-function speak(text) {
-  if ('speechSynthesis' in window) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
-    speechSynthesis.cancel();
-    speechSynthesis.speak(utterance);
+    window.speechSynthesis.onvoiceschanged = () => {
+      speak('', 'en-US');
+    };
+
+    function startGame() {
+      clearInterval(intervalId);
+      // 背景画像を消さずに維持するよう変更
+      // document.body.style.backgroundImage = 'none';
+      upperRow.innerHTML = '';
+      lowerRow.innerHTML = '';
+            timer = 0;
+      mistakes = 0;
+      paused = false;
+      messagePlayed = false;
+      pauseBtn.textContent = '一時停止';
+            timerDisplay.textContent = 'タイム: 0 秒';
+      mistakeDisplay.textContent = `ミス: 0 / ${maxMistakes}`;
+      restartBtn.style.display = 'none';
+      firstCard = null;
+      lock = false;
+      cards = [];
+
+      for (let i = 0; i < 26; i++) {
+        const upper = letters[i];
+        const lower = letters[i].toLowerCase();
+        cards.push({ text: upper, matchKey: upper, isUpper: true });
+        cards.push({ text: lower, matchKey: upper, isUpper: false });
+      }
+
+      cards = cards.sort(() => Math.random() - 0.5);
+
+      
+
+      cards.forEach((card) => {
+        const div = document.createElement('div');
+        div.classList.add('card');
+        div.classList.add(card.isUpper ? 'upper' : 'lower');
+        div.dataset.text = card.text;
+        div.dataset.matchKey = card.matchKey;
+        div.textContent = card.text;
+        div.style.color = '#000';
+        div.style.backgroundImage = 'none';
+        div.style.backgroundColor = card.isUpper ? '#fdd' : '#dfd';
+        div.addEventListener('click', () => flipCard(div));
+        if (card.isUpper) {
+          upperRow.appendChild(div);
+        } else {
+          lowerRow.appendChild(div);
+        }
+      });
+
+      intervalId = setInterval(() => {
+        if (!paused) {
+          timer++;
+          timerDisplay.textContent = `タイム: ${timer} 秒`;
+        }
+      }, 1000);
+    }
+
+    function togglePause() {
+      paused = !paused;
+      pauseBtn.textContent = paused ? '再開' : '一時停止';
+    }
+
+    function flipCard(card) {
+  if (lock || card.classList.contains('matched') || paused) return;
+
+  if (!card.textContent) {
+    card.textContent = card.dataset.text;
+    card.style.color = '#000';
+    card.style.backgroundImage = 'none';
+    card.style.backgroundColor = card.classList.contains('upper') ? '#fdd' : '#dfd';
   }
-}
 
-function addArticle(word) {
-  const noArticleWords = [
-    "bread", "milk", "rice", "pants", "shoes",
-    "I sleep.", "I run.", "I drink juice.", "I brush my teeth.", "I eat sushi.",
-    "I am happy.", "I am sad.", "I am tired.", "I am hungry.", "I am angry.",
-    "red", "blue", "green", "yellow", "black", "white", "orange", "purple", "brown",
-    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
-    "sunny", "rainy", "windy", "cloudy", "snowy"
-  ];
-  if (noArticleWords.includes(word) || word.endsWith("s")) return word;
-  return /^[aeiou]/i.test(word) ? `an ${word}` : `a ${word}`;
-}
+  document.getElementById('pinponAudio').play();
+  setTimeout(() => {
+    playLetterSound(card.dataset.text);
+  }, 200);
 
-    function handleDrop(e) {
-      const target = e.currentTarget;
-      if (target.dataset.word === draggedWord) {
-        target.classList.add("matched", "correct-anim");
-        const match = document.querySelector(`.word-card[data-word="${draggedWord}"]`);
-        if (match) match.classList.add("matched", "correct-anim");
-        if (document.getElementById("timer").style.display === "inline") {
+  if (!firstCard) {
+    firstCard = card;
+  } else {
+    lock = true;
+    if (firstCard.dataset.matchKey === card.dataset.matchKey && firstCard !== card) {
+      const remainingCards = document.querySelectorAll('.card:not(.matched)').length;
+      if (remainingCards <= 10 && !messagePlayed) {
+        speak('カードが少なくなったので裏返します', 'ja-JP');
+        messagePlayed = true;
+        setTimeout(() => {
+          document.querySelectorAll('.card:not(.matched)').forEach(c => {
+            c.textContent = '';
+            c.style.color = 'transparent';
+            if (c.classList.contains('upper')) {
+              c.style.backgroundImage = "url('red.png')";
+            } else {
+              c.style.backgroundImage = "url('green.png')";
+            }
+          });
+        }, 1000);
+      }
+
+      setTimeout(() => {
+        firstCard.classList.add('matched');
+        card.classList.add('matched');
+        firstCard = null;
+        lock = false;
+
+        if (document.querySelectorAll('.matched').length === cards.length) {
+          clearInterval(intervalId);
+          const minutes = Math.floor(timer / 60);
+          const seconds = timer % 60;
+          document.getElementById('clearAudio').play();
           setTimeout(() => {
-        target.style.display = "none";
-        if (match) match.style.display = "none";
-
-        // Check if all cards matched in trial mode
-        const remaining = document.querySelectorAll('.img-card:not([style*="display: none"])').length;
-        if (remaining === 0) {
-          clearInterval(window.timerInterval);
-          const timeText = document.getElementById("timer").textContent;
-          const seconds = timeText.replace('Time: ', '').replace('s', '');
-          speak(`${seconds} seconds! Congratulations!`);
+            speak(`${minutes}分${seconds}秒でクリアしました！`, 'ja-JP');
+          }, 1500);
+          setTimeout(() => alert(`クリア！タイム: ${timer}秒`), 500);
         }
-      }, 200);
-        }
-      } else {
-        target.classList.add("wrong-anim");
-        setTimeout(() => target.classList.remove("wrong-anim"), 350);
-      }
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("practiceBtn").addEventListener("click", () => startGame("practice"));
-      document.getElementById("trialBtn").addEventListener("click", () => startGame("trial"));
-
-      const sel = document.getElementById("categorySelect");
-      const categories = ["Food", "Animals", "School", "Family", "Clothes", "Colors", "Numbers", "Weather", "Actions", "Feelings"];
-      categories.forEach(category => {
-        const option = document.createElement("option");
-        option.value = category;
-        option.textContent = category;
-        sel.appendChild(option);
-      });
-      sel.value = categories[0];
-
-      document.getElementById("startCategoryBtn").addEventListener("click", () => {
-        currentCat = sel.value;
-        buildBoard("practice");
-      });
-
-      document.getElementById("backBtn").addEventListener("click", () => {
-        document.getElementById("gameScreen").style.display = "none";
-        document.getElementById("startScreen").style.display = "block";
-      });
-    });
-
-    function startGame(mode) {
-      document.getElementById("startScreen").style.display = "none";
-      document.getElementById("gameScreen").style.display = "flex";
-
-      const categorySelect = document.getElementById("categorySelect");
-      const startCategoryBtn = document.getElementById("startCategoryBtn");
-      const timer = document.getElementById("timer");
-
-      if (mode === "trial") {
-        categorySelect.style.display = "none";
-        startCategoryBtn.style.display = "none";
-        timer.style.display = "inline";
-        startTimer();
-        buildBoard("trial");
-      } else {
-        categorySelect.style.display = "inline";
-        startCategoryBtn.style.display = "inline";
-        timer.style.display = "none";
-      }
-    }
-
-    function startTimer() {
-      const timer = document.getElementById("timer");
-      let startTime = Date.now();
-      clearInterval(window.timerInterval);
-      window.timerInterval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        timer.textContent = `Time: ${elapsed}s`;
       }, 500);
-    }
-  
-let availableVoices = [];
-
-function initVoices() {
-  return new Promise(resolve => {
-    const voices = speechSynthesis.getVoices();
-    if (voices.length) {
-      availableVoices = voices;
-      resolve();
     } else {
-      speechSynthesis.onvoiceschanged = () => {
-        availableVoices = speechSynthesis.getVoices();
-        resolve();
-      };
-    }
-  });
-}
-
-async function speak(text) {
-  if (!('speechSynthesis' in window)) return;
-
-  await initVoices();
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'en-US';
-
-  const enVoice = availableVoices.find(v => v.lang === 'en-US' || v.lang.startsWith('en'));
-  if (enVoice) utterance.voice = enVoice;
-
-  speechSynthesis.cancel();
-  speechSynthesis.speak(utterance);
-}
-
-let touchCard = null;
-
-document.addEventListener('touchstart', e => {
-  const target = e.target.closest('.word-card');
-  if (!target || target.classList.contains('matched')) return;
-  touchCard = target.cloneNode(true);
-  draggedWord = target.dataset.word;
-  touchCard.style.position = 'absolute';
-  touchCard.style.pointerEvents = 'none';
-  touchCard.style.zIndex = 1000;
-  touchCard.style.opacity = 0.7;
-  touchCard.style.width = target.offsetWidth + 'px';
-  touchCard.style.height = target.offsetHeight + 'px';
-  touchCard.style.lineHeight = getComputedStyle(target).lineHeight;
-  touchCard.style.fontSize = getComputedStyle(target).fontSize;
-  touchCard.style.padding = getComputedStyle(target).padding;
-  document.body.appendChild(touchCard);
-  speak(addArticle(draggedWord));
-});
-
-document.addEventListener('touchmove', e => {
-  if (!touchCard || !e.touches.length) return;
-  const touch = e.touches[0];
-  touchCard.style.left = touch.pageX - touchCard.offsetWidth / 2 + 'px';
-  touchCard.style.top = touch.pageY - touchCard.offsetHeight / 2 + 'px';
-});
-
-document.addEventListener('touchend', e => {
-  if (!touchCard) return;
-  const dropTarget = document.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-  const imgCard = dropTarget?.closest('.img-card');
-  if (imgCard && imgCard.dataset.word === draggedWord) {
-    imgCard.classList.add("matched", "correct-anim");
-    const match = document.querySelector(`.word-card[data-word="${draggedWord}"]`);
-    if (match) match.classList.add("matched", "correct-anim");
-    setTimeout(() => {
-      imgCard.style.display = "none";
-      if (match) match.style.display = "none";
-      const remaining = document.querySelectorAll('.img-card:not([style*="display: none"])').length;
-      if (remaining === 0 && document.getElementById("timer").style.display === "inline") {
-        clearInterval(window.timerInterval);
-        const seconds = document.getElementById("timer").textContent.replace('Time: ', '').replace('s', '');
-        speak(`${seconds} seconds! Congratulations!`);
+      mistakes++;
+      mistakeDisplay.textContent = `ミス: ${mistakes} / ${maxMistakes}`;
+      if (mistakes >= maxMistakes) {
+        clearInterval(intervalId);
+        speak('ゲームオーバー', 'ja-JP');
+        setTimeout(() => {
+          alert(`ゲームオーバー！ミスが ${maxMistakes} 回に達しました。`);
+          restartBtn.style.display = 'inline-block';
+        }, 300);
+        return;
       }
-    }, 200);
-  } else if (imgCard) {
-    imgCard.classList.add("wrong-anim");
-    setTimeout(() => imgCard.classList.remove("wrong-anim"), 350);
-  }
-  touchCard.remove();
-  touchCard = null;
-});
 
-</script>
+      setTimeout(() => {
+        document.querySelectorAll('.card:not(.matched)').forEach(c => {
+          c.textContent = '';
+          c.style.color = 'transparent';
+          if (c.classList.contains('upper')) {
+            c.style.backgroundImage = "url('red.png')";
+          } else {
+            c.style.backgroundImage = "url('green.png')";
+          }
+        });
+        firstCard = null;
+        lock = false;
+      }, 1000);
+    }
+  }
+}
+  </script>
+  <audio id="clearAudio" src="gameclear.mp3"></audio>
 </body>
 </html>
