@@ -1,311 +1,168 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=UD+Digi+Kyokasho+N+R&display=swap">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>大文字小文字マッチングゲーム</title>
+  <title>Alphabet Invaders</title>
   <style>
-    body {
-      background-image: url('bc1.jpg');
-      background-size: contain;
-      background-position: top center;
-      background-repeat: no-repeat;
-      font-family: 'UD Digi Kyokasho N-R', sans-serif;
-      margin: 0;
-      padding: 0;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      background-color: #fffaf8;
-    }
-    .game {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 20px;
-    }
-    .game-row {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .card {
-      width: 60px;
-      height: 80px;
-      background-color: #ccc;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      font-weight: bold;
-      border-radius: 8px;
-      border: 2px solid #888;
-    }
-    .card.upper {
-      background-image: url('red.png');
-      background-size: cover;
-      background-position: center;
-      background-color: #fdd;
-      color: #000;
-    }
-    .card.lower {
-      background-image: url('green.png');
-      background-size: cover;
-      background-position: center;
-      background-color: #dfd;
-      color: #000;
-    }
-    .matched {
-      pointer-events: none;
-      visibility: hidden;
-    }
-    #controls {
-      margin: 20px auto;
-      background: rgba(255, 255, 255, 0.8);
-      padding: 10px 20px;
-      border-radius: 12px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.1);
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      text-align: center;
-    }
-    #score, #timer, #mistakes {
-      font-size: 18px;
-      margin: 0 10px;
-    }
-    #restartBtn {
-      display: none;
-      margin-top: 20px;
-      font-size: 16px;
-      padding: 8px 16px;
-    }
-      @media (max-width: 600px) {
-      .card {
-        width: 38px;
-        height: 52px;
-        font-size: 20px;
-        font-weight: bold;
-        border-radius: 6px;
-      }
-      }
+    body { margin:0; overflow:hidden; }
+    canvas { display:block; background:#000; }
   </style>
 </head>
 <body>
-  <h1 style="background: rgba(255,255,255,0.9); padding: 12px 24px; border-radius: 16px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); font-size: 28px; color: #3f51b5; font-weight: bold; font-family: 'UD Digi Kyokasho N-R', sans-serif;">大文字・小文字 マッチングゲーム</h1>
-  <div id="controls">
-    <button onclick="startGame()" style="background-color: #ffcc00; color: #000; font-weight: bold; padding: 10px 20px; border: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 18px; cursor: pointer;">スタート</button>
-    <button onclick="togglePause()" id="pauseBtn">一時停止</button>
-    
-    <div id="timer" style="background: rgba(255,255,255,0.8); padding: 6px 12px; border-radius: 8px; font-weight: bold; color: #333;">タイム: 0 秒</div>
-    <div id="mistakes" style="background: rgba(255,255,255,0.8); padding: 6px 12px; border-radius: 8px; font-weight: bold; color: #333;">ミス: 0 / 5</div>
-  </div>
-  <button id="restartBtn" onclick="startGame()">再スタート</button>
-  <div class="game">
-    <div class="game-row" id="upperRow"></div>
-    <div class="game-row" id="lowerRow"></div>
-  </div>
-
-  <audio id="letterAudio"></audio>
-  <audio id="pinponAudio" src="pinpon.mp3"></audio>
-
+  <canvas id="canvas" width="800" height="600"></canvas>
   <script>
-    const upperRow = document.getElementById('upperRow');
-    const lowerRow = document.getElementById('lowerRow');
-        const timerDisplay = document.getElementById('timer');
-    const mistakeDisplay = document.getElementById('mistakes');
-    const pauseBtn = document.getElementById('pauseBtn');
-    const restartBtn = document.getElementById('restartBtn');
-    const letterAudio = document.getElementById('letterAudio');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
 
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    let cards = [];
-    let firstCard = null;
-    let lock = false;
-        let timer = 0;
-    let intervalId = null;
-    let paused = false;
-    let mistakes = 0;
-    let messagePlayed = false;
-    const maxMistakes = 5;
-    const bgImages = [
-      'https://cdn.pixabay.com/photo/2017/04/13/21/29/kids-2223656_1280.jpg',
-      'https://cdn.pixabay.com/photo/2021/06/23/06/53/dinosaur-6357831_1280.jpg',
-      'https://cdn.pixabay.com/photo/2016/05/31/18/54/cartoon-1428435_1280.png'
-    ];
+    let stage = 0, globalNext = 0, wrongCount = 0;
+    let aliens = [], startTime, gameOver = false;
 
-    function playLetterSound(letter) {
-      letter = letter.toLowerCase();
-      letterAudio.src = `${letter}.mp3`;
-      letterAudio.play();
+    // 自機
+    const ship = { x: canvas.width/2, y: canvas.height - 40, w: 60, h: 20 };
+
+    // ミサイル
+    const missile = { x:0, y:0, w:4, h:10, active: false, speed: 8 };
+
+    // オーディオをロード
+    const sounds = {};
+    for (let ch of letters) {
+      sounds[ch] = new Audio(ch.toLowerCase() + '.mp3');
+    }
+    const wrongSound = new Audio('wrong.mp3');
+
+    // ステージに応じたエイリアン生成
+    function loadStage() {
+      const slice = stage === 0
+        ? letters.slice(0,14)
+        : letters.slice(14);
+      const arr = slice.split('');
+      aliens = [];
+      const cols = stage === 0 ? 7 : 6;
+      const hMargin = 50, vMargin = 50;
+      const hSpace = (canvas.width - 2*hMargin) / (cols - 1);
+      arr.forEach((letter,i) => {
+        const col = i % cols, row = Math.floor(i/cols);
+        aliens.push({
+          letter,
+          x: hMargin + col*hSpace,
+          y: vMargin + row*60,
+          r: 20
+        });
+      });
+      if (stage === 0) startTime = Date.now();
     }
 
-    function speak(text, lang = 'en-US') {
-      const msg = new SpeechSynthesisUtterance(text);
-      msg.lang = lang;
-      const voices = speechSynthesis.getVoices();
-      const voice = voices.find(v => v.lang === lang);
-      if (voice) {
-        msg.voice = voice;
-      }
-      window.speechSynthesis.speak(msg);
+    // ゲームクリア時表示
+    function drawGameOver() {
+      const elapsed = ((Date.now() - startTime)/1000).toFixed(1);
+      ctx.fillStyle = 'white';
+      ctx.font = '32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`CLEAR! ${elapsed}秒  ミス: ${wrongCount}`, canvas.width/2, canvas.height/2);
     }
 
-    window.speechSynthesis.onvoiceschanged = () => {
-      speak('', 'en-US');
-    };
+    // 描画ループ
+    function loop() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    function startGame() {
-      clearInterval(intervalId);
-      // 背景画像を消さずに維持するよう変更
-      // document.body.style.backgroundImage = 'none';
-      upperRow.innerHTML = '';
-      lowerRow.innerHTML = '';
-            timer = 0;
-      mistakes = 0;
-      paused = false;
-      messagePlayed = false;
-      pauseBtn.textContent = '一時停止';
-            timerDisplay.textContent = 'タイム: 0 秒';
-      mistakeDisplay.textContent = `ミス: 0 / ${maxMistakes}`;
-      restartBtn.style.display = 'none';
-      firstCard = null;
-      lock = false;
-      cards = [];
-
-      for (let i = 0; i < 26; i++) {
-        const upper = letters[i];
-        const lower = letters[i].toLowerCase();
-        cards.push({ text: upper, matchKey: upper, isUpper: true });
-        cards.push({ text: lower, matchKey: upper, isUpper: false });
-      }
-
-      cards = cards.sort(() => Math.random() - 0.5);
-
-      
-
-      cards.forEach((card) => {
-        const div = document.createElement('div');
-        div.classList.add('card');
-        div.classList.add(card.isUpper ? 'upper' : 'lower');
-        div.dataset.text = card.text;
-        div.dataset.matchKey = card.matchKey;
-        div.textContent = card.text;
-        div.style.color = '#000';
-        div.style.backgroundImage = 'none';
-        div.style.backgroundColor = card.isUpper ? '#fdd' : '#dfd';
-        div.addEventListener('click', () => flipCard(div));
-        if (card.isUpper) {
-          upperRow.appendChild(div);
-        } else {
-          lowerRow.appendChild(div);
-        }
+      // エイリアン
+      aliens.forEach(a => {
+        ctx.fillStyle = '#0f0';
+        ctx.beginPath();
+        ctx.arc(a.x, a.y, a.r, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.font = '20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(a.letter, a.x, a.y);
       });
 
-      intervalId = setInterval(() => {
-        if (!paused) {
-          timer++;
-          timerDisplay.textContent = `タイム: ${timer} 秒`;
-        }
-      }, 1000);
-    }
+      // 自機
+      ctx.fillStyle = '#0af';
+      ctx.fillRect(ship.x - ship.w/2, ship.y - ship.h/2, ship.w, ship.h);
 
-    function togglePause() {
-      paused = !paused;
-      pauseBtn.textContent = paused ? '再開' : '一時停止';
-    }
+      // ミサイル
+      if (missile.active) {
+        missile.y -= missile.speed;
+        ctx.fillStyle = 'red';
+        ctx.fillRect(missile.x - missile.w/2, missile.y - missile.h, missile.w, missile.h);
+        if (missile.y < 0) missile.active = false;
 
-    function flipCard(card) {
-  if (lock || card.classList.contains('matched') || paused) return;
-
-  if (!card.textContent) {
-    card.textContent = card.dataset.text;
-    card.style.color = '#000';
-    card.style.backgroundImage = 'none';
-    card.style.backgroundColor = card.classList.contains('upper') ? '#fdd' : '#dfd';
-  }
-
-  document.getElementById('pinponAudio').play();
-  setTimeout(() => {
-    playLetterSound(card.dataset.text);
-  }, 200);
-
-  if (!firstCard) {
-    firstCard = card;
-  } else {
-    lock = true;
-    if (firstCard.dataset.matchKey === card.dataset.matchKey && firstCard !== card) {
-      const remainingCards = document.querySelectorAll('.card:not(.matched)').length;
-      if (remainingCards <= 10 && !messagePlayed) {
-        speak('カードが少なくなったので裏返します', 'ja-JP');
-        messagePlayed = true;
-        setTimeout(() => {
-          document.querySelectorAll('.card:not(.matched)').forEach(c => {
-            c.textContent = '';
-            c.style.color = 'transparent';
-            if (c.classList.contains('upper')) {
-              c.style.backgroundImage = "url('red.png')";
+        // 衝突判定
+        for (let i = 0; i < aliens.length; i++) {
+          const a = aliens[i];
+          const dx = a.x - missile.x;
+          const dy = a.y - missile.y;
+          if (Math.hypot(dx, dy) < a.r) {
+            const expected = letters[globalNext];
+            if (a.letter === expected) {
+              sounds[a.letter].play();
+              aliens.splice(i,1);
+              globalNext++;
+              // 次ステージへ
+              if (aliens.length === 0) {
+                stage++;
+                if (stage < 2) {
+                  loadStage();
+                } else {
+                  gameOver = true;
+                }
+              }
             } else {
-              c.style.backgroundImage = "url('green.png')";
+              wrongSound.play();
+              wrongCount++;
             }
-          });
-        }, 1000);
-      }
-
-      setTimeout(() => {
-        firstCard.classList.add('matched');
-        card.classList.add('matched');
-        firstCard = null;
-        lock = false;
-
-        if (document.querySelectorAll('.matched').length === cards.length) {
-          clearInterval(intervalId);
-          const minutes = Math.floor(timer / 60);
-          const seconds = timer % 60;
-          document.getElementById('clearAudio').play();
-          setTimeout(() => {
-            speak(`${minutes}分${seconds}秒でクリアしました！`, 'ja-JP');
-          }, 1500);
-          setTimeout(() => alert(`クリア！タイム: ${timer}秒`), 500);
-        }
-      }, 500);
-    } else {
-      mistakes++;
-      mistakeDisplay.textContent = `ミス: ${mistakes} / ${maxMistakes}`;
-      if (mistakes >= maxMistakes) {
-        clearInterval(intervalId);
-        speak('ゲームオーバー', 'ja-JP');
-        setTimeout(() => {
-          alert(`ゲームオーバー！ミスが ${maxMistakes} 回に達しました。`);
-          restartBtn.style.display = 'inline-block';
-        }, 300);
-        return;
-      }
-
-      setTimeout(() => {
-        document.querySelectorAll('.card:not(.matched)').forEach(c => {
-          c.textContent = '';
-          c.style.color = 'transparent';
-          if (c.classList.contains('upper')) {
-            c.style.backgroundImage = "url('red.png')";
-          } else {
-            c.style.backgroundImage = "url('green.png')";
+            missile.active = false;
+            break;
           }
-        });
-        firstCard = null;
-        lock = false;
-      }, 1000);
+        }
+      }
+
+      // ゲームオーバー時
+      if (gameOver) {
+        drawGameOver();
+      } else {
+        requestAnimationFrame(loop);
+      }
     }
-  }
-}
+
+    // 入力：ドラッグで自機移動、タップで発射
+    let isDragging = false, dragStartX=0;
+    canvas.addEventListener('pointerdown', e => {
+      const mx = e.offsetX, my = e.offsetY;
+      dragStartX = mx;
+      if (
+        mx >= ship.x - ship.w/2 &&
+        mx <= ship.x + ship.w/2 &&
+        my >= ship.y - ship.h/2 &&
+        my <= ship.y + ship.h/2
+      ) {
+        isDragging = true;
+      }
+    });
+    canvas.addEventListener('pointermove', e => {
+      if (isDragging) {
+        ship.x = e.offsetX;
+      }
+    });
+    canvas.addEventListener('pointerup', e => {
+      if (isDragging) {
+        isDragging = false;
+      } else {
+        // ドラッグしていなければ発射
+        if (!missile.active && !gameOver) {
+          missile.active = true;
+          missile.x = ship.x;
+          missile.y = ship.y - ship.h/2;
+        }
+      }
+    });
+
+    // 初期化
+    loadStage();
+    requestAnimationFrame(loop);
   </script>
-  <audio id="clearAudio" src="gameclear.mp3"></audio>
 </body>
 </html>
