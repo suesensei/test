@@ -52,17 +52,17 @@
     // 自機 (縦長)
     const ship = { x: window.innerWidth / 2, y: window.innerHeight - 70, w: 20, h: 60 };
 
-    // ミサイル（バウンス用パラメータ追加）
-    const missile = { x: 0, y: 0, w: 4, h: 10, active: false, bouncing: false, speed: 16, vx: 0, vy: 0, gravity: 0.5 };
+    // ボール（ミサイル改めボール）
+    const ball = { x: 0, y: 0, r: 8, active: false, bouncing: false, speed: 16, vx: 0, vy: 0, gravity: 0.5 };
 
     // エイリアン移動設定
     let alienVelocity = 1.2;
     const dropDistance = 20;
 
     function loadStage() {
-      // ステージ変わる時はミサイルリセット
-      missile.active = false;
-      missile.bouncing = false;
+      // ボールリセット
+      ball.active = false;
+      ball.bouncing = false;
 
       if (stage >= groups.length) {
         gameOver = true;
@@ -75,13 +75,13 @@
       const perRow = Math.ceil(arr.length / rows);
       arr.forEach((letter, i) => {
         const row = Math.floor(i / perRow);
-        const y = 50 + row * 60;
+        const y = 50 + row * 80; // 行間少し広く
         let x;
-        const minDist = 40;
+        const minDist = 100; // 重なり防止
         do {
           x = Math.random() * (canvas.width - 100) + 50;
         } while (aliens.some(a => Math.abs(a.x - x) < minDist));
-        aliens.push({ letter, x, y, r: 20 });
+        aliens.push({ letter, x, y, rx: 40, ry: 60 }); // 風船形: 横40px 縦60px
       });
     }
 
@@ -89,7 +89,7 @@
       let hitEdge = false;
       aliens.forEach(a => {
         a.x += alienVelocity;
-        if (a.x + a.r >= canvas.width || a.x - a.r <= 0) hitEdge = true;
+        if (a.x + a.rx >= canvas.width || a.x - a.rx <= 0) hitEdge = true;
       });
       if (hitEdge) {
         alienVelocity *= -1;
@@ -112,12 +112,13 @@
       // エイリアン移動・描画
       moveAliens();
       aliens.forEach(a => {
+        // 風船形エイリアン
         ctx.fillStyle = '#0f0';
         ctx.beginPath();
-        ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
+        ctx.ellipse(a.x, a.y, a.rx, a.ry, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#000';
-        ctx.font = '20px sans-serif';
+        ctx.font = '32px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(a.letter, a.x, a.y);
@@ -127,50 +128,53 @@
       ctx.fillStyle = '#0af';
       ctx.fillRect(ship.x - ship.w / 2, ship.y - ship.h / 2, ship.w, ship.h);
 
-      // ミサイル処理
-      if (missile.active) {
-        if (missile.bouncing) {
-          missile.vy += missile.gravity;
-          missile.x += missile.vx;
-          missile.y += missile.vy;
+      // ボール処理
+      if (ball.active) {
+        if (ball.bouncing) {
+          ball.vy += ball.gravity;
+          ball.x += ball.vx;
+          ball.y += ball.vy;
           ctx.fillStyle = 'yellow';
           ctx.beginPath();
-          ctx.arc(missile.x, missile.y, missile.w, 0, Math.PI * 2);
+          ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
           ctx.fill();
           // 画面外で消去
-          if (missile.x < 0 || missile.x > canvas.width || missile.y > canvas.height) {
-            missile.active = false;
-            missile.bouncing = false;
+          if (ball.x < 0 || ball.x > canvas.width || ball.y > canvas.height) {
+            ball.active = false;
+            ball.bouncing = false;
           }
         } else {
-          // 通常ミサイル
-          missile.y -= missile.speed;
+          // 飛んでいくボール
+          ball.y -= ball.speed;
           ctx.fillStyle = 'red';
-          ctx.fillRect(missile.x - missile.w / 2, missile.y - missile.h, missile.w, missile.h);
-          if (missile.y < 0) missile.active = false;
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+          ctx.fill();
+          if (ball.y < 0) ball.active = false;
           // 衝突判定
           aliens.some((a, i) => {
-            const dx = a.x - missile.x;
-            const dy = a.y - missile.y;
-            if (Math.hypot(dx, dy) < a.r) {
+            const dx = a.x - ball.x;
+            const dy = a.y - ball.y;
+            const dist = Math.hypot(dx, dy);
+            // 風船とボールの当たり判定: 半径簡易
+            if (dist < Math.max(a.rx, a.ry)) {
               const expected = groups.flat()[globalNext];
               if (a.letter === expected) {
                 sounds[a.letter].play();
                 aliens.splice(i, 1);
                 globalNext++;
-                // ステージクリア判定
                 if (aliens.length === 0) {
                   stage++;
                   loadStage();
                 }
                 // バウンス開始
-                missile.bouncing = true;
-                missile.vy = -12;
-                missile.vx = 0;
+                ball.bouncing = true;
+                ball.vy = -12;
+                ball.vx = 0;
               } else {
                 wrongSound.play();
                 wrongCount++;
-                missile.active = false;
+                ball.active = false;
               }
               return true;
             }
@@ -179,11 +183,7 @@
         }
       }
 
-      if (gameOver) {
-        drawGameOver();
-      } else {
-        requestAnimationFrame(loop);
-      }
+      if (gameOver) drawGameOver(); else requestAnimationFrame(loop);
     }
 
     // ゲーム開始
@@ -195,7 +195,7 @@
     }
     document.getElementById('startButton').addEventListener('click', startGame);
 
-    // 入力処理
+    // 入력処理
     let isDragging = false, startOnShip = false;
     canvas.addEventListener('pointerdown', e => {
       const mx = e.offsetX, my = e.offsetY;
@@ -214,10 +214,10 @@
       }
     });
     canvas.addEventListener('pointerup', e => {
-      if (startOnShip && !isDragging && !missile.active && !gameOver) {
-        missile.active = true;
-        missile.x = ship.x;
-        missile.y = ship.y - ship.h / 2;
+      if (startOnShip && !isDragging && !ball.active && !gameOver) {
+        ball.active = true;
+        ball.x = ship.x;
+        ball.y = ship.y - ship.h / 2;
       }
       isDragging = false;
       startOnShip = false;
