@@ -7,9 +7,28 @@
   <style>
     html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
     #canvas { display: block; background: #000; width: 100%; height: 100%; }
+    #startScreen {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+    #startButton {
+      padding: 20px 40px;
+      font-size: 24px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
+  <!-- ゲーム開始画面 -->
+  <div id="startScreen">
+    <button id="startButton">START</button>
+  </div>
   <canvas id="canvas"></canvas>
   <script>
     const canvas = document.getElementById('canvas');
@@ -22,7 +41,6 @@
       ship.y = canvas.height - 40;
     }
     window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
 
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     let stage = 0, globalNext = 0, wrongCount = 0, gameOver = false;
@@ -52,7 +70,7 @@
       aliens = [];
       const rows = 2;
       const perRow = arr.length / rows;
-      startTime = stage === 0 ? Date.now() : startTime;
+      if (stage === 0) startTime = Date.now();
 
       arr.forEach((letter, i) => {
         const row = Math.floor(i / perRow);
@@ -60,7 +78,7 @@
 
         // 重ならないランダム配置
         let x;
-        const minDist = 2 * 20;
+        const minDist = 40;
         do {
           x = Math.random() * (canvas.width - 100) + 50;
         } while (
@@ -153,6 +171,14 @@
       if (gameOver) drawGameOver(); else requestAnimationFrame(loop);
     }
 
+    // ゲーム開始
+    function startGame() {
+      document.getElementById('startScreen').style.display = 'none';
+      loadStage();
+      requestAnimationFrame(loop);
+    }
+    document.getElementById('startButton').addEventListener('click', startGame);
+
     // 入力処理
     let isDragging = false;
     canvas.addEventListener('pointerdown', e => {
@@ -177,9 +203,8 @@
       }
     });
 
-    // 初期化
-    loadStage();
-    requestAnimationFrame(loop);
+    // 初期表示
+    resizeCanvas();
   </script>
 </body>
 </html>
