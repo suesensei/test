@@ -6,7 +6,7 @@
   <title>Responsive Alphabet Invaders</title>
   <style>
     html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-    #canvas { display: block; background: #000; width: 100%; height: 100%; touch-action: none; }
+    #canvas { display: block; width: 100%; height: 100%; touch-action: none; background: #87CEEB; }
     #startScreen {
       position: absolute; top: 0; left: 0;
       width: 100%; height: 100%;
@@ -34,6 +34,21 @@
     }
     window.addEventListener('resize', resizeCanvas);
 
+    // 風船の色候補
+    const balloonColors = ['#FF6666', '#66FF66', '#FFCC66', '#66CCFF', '#FF66CC', '#CCCCFF'];
+
+    // 雲の設定
+    const clouds = [];
+    function initClouds() {
+      for (let i = 0; i < 5; i++) {
+        clouds.push({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight * 0.3 + 20,
+          scale: Math.random() * 0.5 + 0.8
+        });
+      }
+    }
+
     // レターグループ分割
     const groups = [
       'ABCDEFG'.split(''),
@@ -52,7 +67,7 @@
     // 自機 (縦長)
     const ship = { x: window.innerWidth / 2, y: window.innerHeight - 70, w: 20, h: 60 };
 
-    // ボール（ミサイル改めボール）
+    // ボール（風船撃ち）
     const ball = { x: 0, y: 0, r: 8, active: false, bouncing: false, speed: 16, vx: 0, vy: 0, gravity: 0.5 };
 
     // エイリアン移動設定
@@ -75,13 +90,13 @@
       const perRow = Math.ceil(arr.length / rows);
       arr.forEach((letter, i) => {
         const row = Math.floor(i / perRow);
-        const y = 50 + row * 80; // 行間少し広く
+        const y = 80 + row * 100;
         let x;
-        const minDist = 100; // 重なり防止
+        const minDist = 120;
         do {
           x = Math.random() * (canvas.width - 100) + 50;
         } while (aliens.some(a => Math.abs(a.x - x) < minDist));
-        aliens.push({ letter, x, y, rx: 40, ry: 60 }); // 風船形: 横40px 縦60px
+        aliens.push({ letter, x, y, rx: 40, ry: 60, color: balloonColors[Math.floor(Math.random() * balloonColors.length)] });
       });
     }
 
@@ -97,23 +112,42 @@
       }
     }
 
+    function drawClouds() {
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      clouds.forEach(c => {
+        // 移動
+        c.x -= 0.2;
+        if (c.x < -100) c.x = canvas.width + 100;
+        // 描画
+        ctx.beginPath();
+        ctx.ellipse(c.x, c.y, 30 * c.scale, 20 * c.scale, 0, 0, Math.PI * 2);
+        ctx.ellipse(c.x + 40 * c.scale, c.y, 20 * c.scale, 15 * c.scale, 0, 0, Math.PI * 2);
+        ctx.ellipse(c.x - 40 * c.scale, c.y, 20 * c.scale, 15 * c.scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
     function drawGameOver() {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-      ctx.fillStyle = 'white';
+      ctx.fillStyle = 'black';
       ctx.font = '32px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(`CLEAR! ${elapsed}秒  ミス: ${wrongCount}`, canvas.width / 2, canvas.height / 2);
     }
 
     function loop() {
+      // 背景
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#87CEEB';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawClouds();
+
       ship.y = canvas.height - ship.h - 10;
 
-      // エイリアン移動・描画
+      // 風船エイリアン移動・描画
       moveAliens();
       aliens.forEach(a => {
-        // 風船形エイリアン
-        ctx.fillStyle = '#0f0';
+        ctx.fillStyle = a.color;
         ctx.beginPath();
         ctx.ellipse(a.x, a.y, a.rx, a.ry, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -135,47 +169,24 @@
           ball.x += ball.vx;
           ball.y += ball.vy;
           ctx.fillStyle = 'yellow';
-          ctx.beginPath();
-          ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
-          ctx.fill();
-          // 画面外で消去
+          ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
           if (ball.x < 0 || ball.x > canvas.width || ball.y > canvas.height) {
-            ball.active = false;
-            ball.bouncing = false;
+            ball.active = false; ball.bouncing = false;
           }
         } else {
-          // 飛んでいくボール
           ball.y -= ball.speed;
           ctx.fillStyle = 'red';
-          ctx.beginPath();
-          ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
           if (ball.y < 0) ball.active = false;
-          // 衝突判定
           aliens.some((a, i) => {
-            const dx = a.x - ball.x;
-            const dy = a.y - ball.y;
-            const dist = Math.hypot(dx, dy);
-            // 風船とボールの当たり判定: 半径簡易
-            if (dist < Math.max(a.rx, a.ry)) {
+            const dx = a.x - ball.x, dy = a.y - ball.y;
+            if (Math.hypot(dx, dy) < Math.max(a.rx, a.ry)) {
               const expected = groups.flat()[globalNext];
               if (a.letter === expected) {
-                sounds[a.letter].play();
-                aliens.splice(i, 1);
-                globalNext++;
-                if (aliens.length === 0) {
-                  stage++;
-                  loadStage();
-                }
-                // バウンス開始
-                ball.bouncing = true;
-                ball.vy = -12;
-                ball.vx = 0;
-              } else {
-                wrongSound.play();
-                wrongCount++;
-                ball.active = false;
-              }
+                sounds[a.letter].play(); aliens.splice(i, 1); globalNext++;
+                if (aliens.length === 0) { stage++; loadStage(); }
+                ball.bouncing = true; ball.vy = -12; ball.vx = 0;
+              } else { wrongSound.play(); wrongCount++; ball.active = false; }
               return true;
             }
             return false;
@@ -189,9 +200,7 @@
     // ゲーム開始
     function startGame() {
       document.getElementById('startScreen').style.display = 'none';
-      resizeCanvas();
-      loadStage();
-      requestAnimationFrame(loop);
+      resizeCanvas(); initClouds(); loadStage(); requestAnimationFrame(loop);
     }
     document.getElementById('startButton').addEventListener('click', startGame);
 
@@ -199,29 +208,16 @@
     let isDragging = false, startOnShip = false;
     canvas.addEventListener('pointerdown', e => {
       const mx = e.offsetX, my = e.offsetY;
-      if (
-        mx >= ship.x - ship.w / 2 && mx <= ship.x + ship.w / 2 &&
-        my >= ship.y - ship.h / 2 && my <= ship.y + ship.h / 2
-      ) {
-        startOnShip = true;
-        canvas.setPointerCapture(e.pointerId);
+      if (mx >= ship.x - ship.w / 2 && mx <= ship.x + ship.w / 2 && my >= ship.y - ship.h / 2 && my <= ship.y + ship.h / 2) {
+        startOnShip = true; canvas.setPointerCapture(e.pointerId);
       }
     });
-    canvas.addEventListener('pointermove', e => {
-      if (startOnShip) {
-        isDragging = true;
-        ship.x = e.offsetX;
-      }
-    });
+    canvas.addEventListener('pointermove', e => { if (startOnShip) { isDragging = true; ship.x = e.offsetX; } });
     canvas.addEventListener('pointerup', e => {
       if (startOnShip && !isDragging && !ball.active && !gameOver) {
-        ball.active = true;
-        ball.x = ship.x;
-        ball.y = ship.y - ship.h / 2;
+        ball.active = true; ball.x = ship.x; ball.y = ship.y - ship.h / 2;
       }
-      isDragging = false;
-      startOnShip = false;
-      canvas.releasePointerCapture(e.pointerId);
+      isDragging = false; startOnShip = false; canvas.releasePointerCapture(e.pointerId);
     });
 
     // 初期表示
