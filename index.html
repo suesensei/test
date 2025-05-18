@@ -6,29 +6,21 @@
   <title>Responsive Alphabet Invaders</title>
   <style>
     html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-    #canvas { display: block; background: #000; width: 100%; height: 100%; }
+    #canvas { display: block; background: #000; width: 100%; height: 100%; touch-action: none; }
     #startScreen {
-      position: absolute;
-      top: 0; left: 0;
+      position: absolute; top: 0; left: 0;
       width: 100%; height: 100%;
       background: rgba(0,0,0,0.8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       z-index: 2;
     }
     #startButton {
-      padding: 20px 40px;
-      font-size: 24px;
-      cursor: pointer;
+      padding: 20px 40px; font-size: 24px; cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <!-- ゲーム開始画面 -->
-  <div id="startScreen">
-    <button id="startButton">START</button>
-  </div>
+  <div id="startScreen"><button id="startButton">START</button></div>
   <canvas id="canvas"></canvas>
   <script>
     const canvas = document.getElementById('canvas');
@@ -38,68 +30,56 @@
     function resizeCanvas() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      ship.y = canvas.height - 40;
+      ship.y = canvas.height - ship.h - 10;
     }
     window.addEventListener('resize', resizeCanvas);
 
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    // レターグループ分割
+    const groups = [
+      'ABCDEFG'.split(''),
+      'HIJKLMNOP'.split(''),
+      'QRSTUVWXYZ'.split('')
+    ];
+
+    // サウンドロード
+    const sounds = {};
+    groups.flat().forEach(ch => {
+      sounds[ch] = new Audio(ch.toLowerCase() + '.mp3');
+    });
+    const wrongSound = new Audio('wrong.mp3');
+
     let stage = 0, globalNext = 0, wrongCount = 0, gameOver = false;
     let aliens = [], startTime;
 
-    // 自機
-    const ship = { x: canvas.width / 2, y: canvas.height - 40, w: 60, h: 20 };
+    // 自機 (縦長)
+    const ship = { x: window.innerWidth / 2, y: window.innerHeight - 70, w: 20, h: 60 };
 
     // ミサイル
     const missile = { x: 0, y: 0, w: 4, h: 10, active: false, speed: 8 };
-
-    // サウンド
-    const sounds = {};
-    for (let ch of letters) {
-      sounds[ch] = new Audio(ch.toLowerCase() + '.mp3');
-    }
-    const wrongSound = new Audio('wrong.mp3');
 
     // エイリアン移動設定
     let alienVelocity = 1.2;
     const dropDistance = 20;
 
-    // ステージ読み込み
     function loadStage() {
-      const slice = stage === 0 ? letters.slice(0, 14) : letters.slice(14);
-      const arr = slice.split('');
+      if (stage >= groups.length) { gameOver = true; return; }
+      const arr = groups[stage];
       aliens = [];
-      const rows = 2;
-      const perRow = arr.length / rows;
       if (stage === 0) startTime = Date.now();
-
+      const rows = 2;
+      const perRow = Math.ceil(arr.length / rows);
       arr.forEach((letter, i) => {
         const row = Math.floor(i / perRow);
         const y = 50 + row * 60;
-
-        // 重ならないランダム配置
         let x;
         const minDist = 40;
         do {
           x = Math.random() * (canvas.width - 100) + 50;
-        } while (
-          aliens.some(a => Math.abs(a.x - x) < minDist) ||
-          Math.abs(x - ship.x) < ship.w
-        );
-
+        } while (aliens.some(a => Math.abs(a.x - x) < minDist));
         aliens.push({ letter, x, y, r: 20 });
       });
     }
 
-    // ゲームクリア表示
-    function drawGameOver() {
-      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-      ctx.fillStyle = 'white';
-      ctx.font = '32px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`CLEAR! ${elapsed}秒  ミス: ${wrongCount}`, canvas.width / 2, canvas.height / 2);
-    }
-
-    // エイリアン移動
     function moveAliens() {
       let hitEdge = false;
       aliens.forEach(a => {
@@ -112,23 +92,27 @@
       }
     }
 
-    // 描画ループ
+    function drawGameOver() {
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      ctx.fillStyle = 'white';
+      ctx.font = '32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`CLEAR! ${elapsed}秒  ミス: ${wrongCount}`, canvas.width / 2, canvas.height / 2);
+    }
+
     function loop() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ship.y = canvas.height - 40;
+      ship.y = canvas.height - ship.h - 10;
 
       moveAliens();
 
       // エイリアン描画
       aliens.forEach(a => {
         ctx.fillStyle = '#0f0';
-        ctx.beginPath();
-        ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
+        ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#000';
-        ctx.font = '20px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        ctx.font = '20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(a.letter, a.x, a.y);
       });
 
@@ -147,14 +131,14 @@
           const dx = a.x - missile.x;
           const dy = a.y - missile.y;
           if (Math.hypot(dx, dy) < a.r) {
-            const expected = letters[globalNext];
+            const expected = groups.flat()[globalNext];
             if (a.letter === expected) {
               sounds[a.letter].play();
               aliens.splice(i, 1);
               globalNext++;
               if (aliens.length === 0) {
                 stage++;
-                if (stage < 2) loadStage(); else gameOver = true;
+                if (stage < groups.length) loadStage(); else gameOver = true;
               }
             } else {
               wrongSound.play();
@@ -167,40 +151,46 @@
         });
       }
 
-      // ゲームオーバー
       if (gameOver) drawGameOver(); else requestAnimationFrame(loop);
     }
 
     // ゲーム開始
     function startGame() {
       document.getElementById('startScreen').style.display = 'none';
+      resizeCanvas();
       loadStage();
       requestAnimationFrame(loop);
     }
     document.getElementById('startButton').addEventListener('click', startGame);
 
-    // 入力処理
-    let isDragging = false;
+    // 入力処理（スムーズなドラッグとタップで発射）
+    let isDragging = false, startOnShip = false;
     canvas.addEventListener('pointerdown', e => {
       const mx = e.offsetX, my = e.offsetY;
       if (
         mx >= ship.x - ship.w / 2 && mx <= ship.x + ship.w / 2 &&
         my >= ship.y - ship.h / 2 && my <= ship.y + ship.h / 2
       ) {
-        isDragging = true;
+        startOnShip = true;
+        canvas.setPointerCapture(e.pointerId);
       }
     });
     canvas.addEventListener('pointermove', e => {
-      if (isDragging) ship.x = e.offsetX;
+      if (startOnShip) {
+        isDragging = true;
+        ship.x = e.offsetX;
+      }
     });
     canvas.addEventListener('pointerup', e => {
-      if (isDragging) {
-        isDragging = false;
-      } else if (!missile.active && !gameOver) {
+      if (startOnShip && !isDragging && !missile.active && !gameOver) {
+        // タップで発射
         missile.active = true;
         missile.x = ship.x;
         missile.y = ship.y - ship.h / 2;
       }
+      isDragging = false;
+      startOnShip = false;
+      canvas.releasePointerCapture(e.pointerId);
     });
 
     // 初期表示
