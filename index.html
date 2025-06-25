@@ -83,9 +83,8 @@
         }
 
         .animal-option.incorrect {
-            opacity: 0.5;
-            border-color: #ccc;
-            cursor: not-allowed;
+            opacity: 0.6;
+            border-color: #ff4500;
             transform: scale(1);
         }
         
@@ -96,7 +95,7 @@
 
         #feedback-text {
             font-size: 1.8em;
-            height: 45px; /* 高さを少し増やして安定させる */
+            height: 45px;
             margin-bottom: 10px;
             display: flex;
             justify-content: center;
@@ -136,6 +135,11 @@
             transform: translateY(4px);
             box-shadow: none;
         }
+        
+        /* ★修正点1: 画面の動きをなくすためのCSS */
+        .hidden {
+            visibility: hidden;
+        }
 
         #next-button {
              background-color: #32cd32;
@@ -148,42 +152,18 @@
         }
         
         @media (max-width: 600px) {
-            #game-container {
-                padding: 15px;
-            }
-            #game-title {
-                font-size: 1.8em;
-            }
-            #question-text {
-                font-size: 1.3em;
-                height: 40px;
-            }
-            .animal-option {
-                width: 110px;
-                height: 110px;
-                padding: 5px;
-            }
-            #options-container {
-                gap: 10px;
-            }
-            #feedback-text {
-                font-size: 1.5em;
-                height: 40px;
-            }
-            .game-button {
-                font-size: 1.2em;
-                padding: 12px 25px;
-            }
-            #button-wrapper {
-                min-height: 65px;
-            }
+            #game-container { padding: 15px; }
+            #game-title { font-size: 1.8em; }
+            #question-text { font-size: 1.3em; height: 40px; }
+            .animal-option { width: 110px; height: 110px; padding: 5px; }
+            #options-container { gap: 10px; }
+            #feedback-text { font-size: 1.5em; height: 40px; }
+            .game-button { font-size: 1.2em; padding: 12px 25px; }
+            #button-wrapper { min-height: 65px; }
         }
         
         @media (max-width: 380px) {
-            .animal-option {
-                width: 95px;
-                height: 95px;
-            }
+            .animal-option { width: 95px; height: 95px; }
         }
 
     </style>
@@ -198,8 +178,8 @@
 
     <div id="button-wrapper">
         <button id="start-button" class="game-button">スタート！</button>
-        <button id="next-button" class="game-button" style="display: none;">つぎのもんだいへ</button>
-        <button id="play-again-button" class="game-button" style="display: none;">もういっかい！</button>
+        <button id="next-button" class="game-button hidden">つぎのもんだいへ</button>
+        <button id="play-again-button" class="game-button hidden">もういっかい！</button>
     </div>
 </div>
 
@@ -228,12 +208,10 @@
     let currentQuestionIndex = 0;
     let synth = window.speechSynthesis;
     let isAnswered = false;
-    let score = 0; // ★修正点2: スコアを記録する変数を追加
+    let score = 0;
 
     function speak(text) {
-        if (synth.speaking) {
-            synth.cancel();
-        }
+        if (synth.speaking) synth.cancel();
         let utterThis = new SpeechSynthesisUtterance(text);
         utterThis.lang = 'en-US';
         utterThis.pitch = 1.2;
@@ -241,11 +219,8 @@
         synth.speak(utterThis);
     }
 
-    // ★修正点2: 日本語を発音する関数を追加
     function speakJapanese(text) {
-        if (synth.speaking) {
-            synth.cancel();
-        }
+        if (synth.speaking) synth.cancel();
         let utterThis = new SpeechSynthesisUtterance(text);
         utterThis.lang = 'ja-JP';
         utterThis.pitch = 1.0;
@@ -261,10 +236,10 @@
     }
 
     function startGame() {
-        score = 0; // ★修正点2: ゲーム開始時にスコアをリセット
-        startButton.style.display = 'none';
-        playAgainButton.style.display = 'none';
-        nextButton.style.display = 'none';
+        score = 0;
+        startButton.classList.add('hidden');
+        playAgainButton.classList.add('hidden');
+        nextButton.classList.add('hidden');
         feedbackText.textContent = '';
         currentQuestionIndex = 0;
         shuffledAnimals = [...animalData];
@@ -274,13 +249,9 @@
 
     function showQuestion() {
         isAnswered = false;
-        // ★修正点1: ボタンの表示/非表示をまとめて管理
-        startButton.style.display = 'none';
-        playAgainButton.style.display = 'none';
-        nextButton.style.display = 'none';
-
+        nextButton.classList.add('hidden');
         optionsContainer.innerHTML = '';
-        feedbackText.textContent = ''; // メッセージを消すことで高さを0にする
+        feedbackText.textContent = '';
         feedbackText.className = '';
 
         const currentAnimal = shuffledAnimals[currentQuestionIndex];
@@ -293,55 +264,59 @@
 
         const otherAnimals = animalData.filter(animal => animal.name !== currentAnimal.name);
         shuffleArray(otherAnimals);
-        
         options.push(otherAnimals[0]);
         options.push(otherAnimals[1]);
-        
         shuffleArray(options);
 
         options.forEach(animal => {
             const optionElement = document.createElement('div');
             optionElement.classList.add('animal-option');
             optionElement.dataset.name = animal.name;
-            
             const imgElement = document.createElement('img');
             imgElement.src = animal.image;
             imgElement.alt = animal.japanese;
-            
             optionElement.appendChild(imgElement);
             optionElement.addEventListener('click', selectAnswer);
             optionsContainer.appendChild(optionElement);
         });
     }
 
+    // ★修正点2: ゲームルールを大幅に変更
     function selectAnswer(event) {
         if (isAnswered) return;
+        isAnswered = true;
 
         const selectedOption = event.currentTarget;
         const selectedName = selectedOption.dataset.name;
         const correctName = shuffledAnimals[currentQuestionIndex].name;
 
+        // 全ての選択肢を操作不可にする
+        Array.from(optionsContainer.children).forEach(child => {
+            child.style.pointerEvents = 'none';
+        });
+
         if (selectedName === correctName) {
-            score++; // ★修正点2: 正解したらスコアを1増やす
-            isAnswered = true;
+            score++;
             feedbackText.textContent = 'Correct! せいかい！';
             feedbackText.className = 'correct';
             selectedOption.classList.add('correct');
-            
-            Array.from(optionsContainer.children).forEach(child => {
-                child.style.pointerEvents = 'none';
-            });
-            
-            setTimeout(() => {
-                 nextButton.style.display = 'inline-block';
-            }, 500);
-
         } else {
-            feedbackText.textContent = 'Try Again! ちがうよ';
+            // 不正解の時の処理
+            feedbackText.textContent = 'ざんねん！';
             feedbackText.className = 'incorrect';
             selectedOption.classList.add('incorrect');
-            selectedOption.style.pointerEvents = 'none';
+            
+            // 正解の選択肢をハイライトして教える
+            const correctOption = optionsContainer.querySelector(`[data-name="${correctName}"]`);
+            if (correctOption) {
+                correctOption.classList.add('correct');
+            }
         }
+        
+        // 正解・不正解どちらの場合も、少し待ってから「つぎへ」ボタンを表示
+        setTimeout(() => {
+             nextButton.classList.remove('hidden');
+        }, 1500); // 1.5秒待つ
     }
     
     function nextQuestion() {
@@ -353,7 +328,6 @@
         }
     }
     
-    // ★修正点2: ゲーム終了時の処理を更新
     function endGame() {
         questionText.textContent = 'ぜんぶクリア！';
         optionsContainer.innerHTML = '<span style="font-size: 5em;">🎉</span>';
@@ -364,14 +338,19 @@
         feedbackText.textContent = resultMessageForDisplay;
         feedbackText.className = 'correct';
         
-        // 少し待ってから結果を読み上げる
         setTimeout(() => {
             speakJapanese(resultMessageForSpeech);
         }, 500);
 
-        nextButton.style.display = 'none';
-        playAgainButton.style.display = 'inline-block';
+        nextButton.classList.add('hidden');
+        playAgainButton.classList.remove('hidden');
     }
+
+    // 初期状態では「次へ」と「もう一回」を隠しておく
+    document.addEventListener('DOMContentLoaded', () => {
+        nextButton.classList.add('hidden');
+        playAgainButton.classList.add('hidden');
+    });
 
     startButton.addEventListener('click', startGame);
     nextButton.addEventListener('click', nextQuestion);
