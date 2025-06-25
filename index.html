@@ -13,19 +13,19 @@
         }
 
         body {
-            font-family: 'Mochiy Pop One', sans-serif;
+            font-family: 'Mochiy+Pop+One', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            padding: 20px 10px; /* 左右にも少しパディングを追加 */
+            padding: 20px 10px;
             background-color: #f0f8ff;
         }
 
         #game-container {
             width: 100%;
-            max-width: 700px; /* 少しだけ最大幅を広げます */
+            max-width: 700px;
             background-color: #ffffff;
             border-radius: 20px;
             padding: 20px 30px;
@@ -35,12 +35,12 @@
 
         #game-title {
             color: #ff6347;
-            font-size: 2.2em; /* 少し大きく */
+            font-size: 2.2em;
             margin-bottom: 10px;
         }
 
         #question-text {
-            font-size: 1.6em; /* 少し大きく */
+            font-size: 1.6em;
             color: #333;
             margin-bottom: 20px;
             height: 50px;
@@ -58,7 +58,6 @@
         }
 
         .animal-option {
-            /* ★画像を大きくしました */
             width: 150px; 
             height: 150px;
             border: 5px solid #add8e6;
@@ -99,7 +98,7 @@
         #feedback-text {
             font-size: 1.8em;
             height: 40px;
-            margin-bottom: 20px;
+            margin-bottom: 10px; /* 少しマージンを調整 */
         }
 
         #feedback-text.correct {
@@ -110,10 +109,18 @@
             color: #ff4500;
         }
 
+        /* ★修正点1: 画面の動きをなくすための対策 */
+        #button-wrapper {
+            min-height: 70px; /* ボタンの高さを確保するスペース */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
         .game-button {
             padding: 15px 30px;
             font-size: 1.5em;
-            font-family: 'Mochiy Pop One', sans-serif;
+            font-family: 'Mochiy+Pop+One', sans-serif;
             cursor: pointer;
             border: none;
             border-radius: 15px;
@@ -139,44 +146,38 @@
              box-shadow: 0 4px #e5583f;
         }
         
-        /* ★★★ここからリスポンシブ対応のコード★★★ */
         @media (max-width: 600px) {
             #game-container {
                 padding: 15px;
             }
-
             #game-title {
                 font-size: 1.8em;
             }
-
             #question-text {
                 font-size: 1.3em;
                 height: 40px;
             }
-
-            /* 小さい画面用に画像サイズを調整 */
             .animal-option {
                 width: 110px;
                 height: 110px;
                 padding: 5px;
             }
-
             #options-container {
                 gap: 10px;
             }
-
             #feedback-text {
                 font-size: 1.5em;
             }
-
             .game-button {
                 font-size: 1.2em;
                 padding: 12px 25px;
             }
+            #button-wrapper {
+                min-height: 60px; /* 小さい画面用に調整 */
+            }
         }
         
         @media (max-width: 380px) {
-             /* 特に小さい画面用にさらに調整 */
             .animal-option {
                 width: 95px;
                 height: 95px;
@@ -192,9 +193,12 @@
     <p id="question-text">ボタンをおしてね！</p>
     <div id="options-container"></div>
     <p id="feedback-text"></p>
-    <button id="start-button" class="game-button">スタート！</button>
-    <button id="next-button" class="game-button" style="display: none;">つぎのもんだいへ</button>
-    <button id="play-again-button" class="game-button" style="display: none;">もういっかい！</button>
+
+    <div id="button-wrapper">
+        <button id="start-button" class="game-button">スタート！</button>
+        <button id="next-button" class="game-button" style="display: none;">つぎのもんだいへ</button>
+        <button id="play-again-button" class="game-button" style="display: none;">もういっかい！</button>
+    </div>
 </div>
 
 <script>
@@ -244,6 +248,7 @@
     function startGame() {
         startButton.style.display = 'none';
         playAgainButton.style.display = 'none';
+        nextButton.style.display = 'none';
         feedbackText.textContent = '';
         currentQuestionIndex = 0;
         shuffledAnimals = [...animalData];
