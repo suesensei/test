@@ -7,13 +7,12 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap');
 
-        /* 基本的なリセットと設定 */
         * {
             box-sizing: border-box;
         }
 
         body {
-            font-family: 'Mochiy+Pop+One', sans-serif;
+            font-family: 'Mochiy Pop One', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -97,8 +96,11 @@
 
         #feedback-text {
             font-size: 1.8em;
-            height: 40px;
-            margin-bottom: 10px; /* 少しマージンを調整 */
+            height: 45px; /* 高さを少し増やして安定させる */
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         #feedback-text.correct {
@@ -109,9 +111,8 @@
             color: #ff4500;
         }
 
-        /* ★修正点1: 画面の動きをなくすための対策 */
         #button-wrapper {
-            min-height: 70px; /* ボタンの高さを確保するスペース */
+            min-height: 75px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -120,7 +121,7 @@
         .game-button {
             padding: 15px 30px;
             font-size: 1.5em;
-            font-family: 'Mochiy+Pop+One', sans-serif;
+            font-family: 'Mochiy Pop One', sans-serif;
             cursor: pointer;
             border: none;
             border-radius: 15px;
@@ -167,13 +168,14 @@
             }
             #feedback-text {
                 font-size: 1.5em;
+                height: 40px;
             }
             .game-button {
                 font-size: 1.2em;
                 padding: 12px 25px;
             }
             #button-wrapper {
-                min-height: 60px; /* 小さい画面用に調整 */
+                min-height: 65px;
             }
         }
         
@@ -226,6 +228,7 @@
     let currentQuestionIndex = 0;
     let synth = window.speechSynthesis;
     let isAnswered = false;
+    let score = 0; // ★修正点2: スコアを記録する変数を追加
 
     function speak(text) {
         if (synth.speaking) {
@@ -238,6 +241,18 @@
         synth.speak(utterThis);
     }
 
+    // ★修正点2: 日本語を発音する関数を追加
+    function speakJapanese(text) {
+        if (synth.speaking) {
+            synth.cancel();
+        }
+        let utterThis = new SpeechSynthesisUtterance(text);
+        utterThis.lang = 'ja-JP';
+        utterThis.pitch = 1.0;
+        utterThis.rate = 1.0;
+        synth.speak(utterThis);
+    }
+
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -246,6 +261,7 @@
     }
 
     function startGame() {
+        score = 0; // ★修正点2: ゲーム開始時にスコアをリセット
         startButton.style.display = 'none';
         playAgainButton.style.display = 'none';
         nextButton.style.display = 'none';
@@ -258,9 +274,13 @@
 
     function showQuestion() {
         isAnswered = false;
+        // ★修正点1: ボタンの表示/非表示をまとめて管理
+        startButton.style.display = 'none';
+        playAgainButton.style.display = 'none';
         nextButton.style.display = 'none';
+
         optionsContainer.innerHTML = '';
-        feedbackText.textContent = '';
+        feedbackText.textContent = ''; // メッセージを消すことで高さを0にする
         feedbackText.className = '';
 
         const currentAnimal = shuffledAnimals[currentQuestionIndex];
@@ -302,6 +322,7 @@
         const correctName = shuffledAnimals[currentQuestionIndex].name;
 
         if (selectedName === correctName) {
+            score++; // ★修正点2: 正解したらスコアを1増やす
             isAnswered = true;
             feedbackText.textContent = 'Correct! せいかい！';
             feedbackText.className = 'correct';
@@ -332,11 +353,22 @@
         }
     }
     
+    // ★修正点2: ゲーム終了時の処理を更新
     function endGame() {
         questionText.textContent = 'ぜんぶクリア！';
         optionsContainer.innerHTML = '<span style="font-size: 5em;">🎉</span>';
-        feedbackText.textContent = 'よくできました！';
+        
+        const resultMessageForDisplay = `きみは ${score}もん せいかいしたよ！`;
+        const resultMessageForSpeech = `${score}問正解したよ`;
+
+        feedbackText.textContent = resultMessageForDisplay;
         feedbackText.className = 'correct';
+        
+        // 少し待ってから結果を読み上げる
+        setTimeout(() => {
+            speakJapanese(resultMessageForSpeech);
+        }, 500);
+
         nextButton.style.display = 'none';
         playAgainButton.style.display = 'inline-block';
     }
