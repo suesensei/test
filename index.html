@@ -1,183 +1,277 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Responsive Alphabet Invaders</title>
-  <style>
-    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-    #canvas {
-      display: block;
-      width: 100%; height: 100%;
-      background: #87CEEB;
-      touch-action: none;
-      -webkit-user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-    #startScreen {
-      position: absolute; top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 2;
-    }
-    #startButton {
-      padding: 20px 40px; font-size: 24px; cursor: pointer;
-      touch-action: manipulation;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>どうぶつ えいごゲーム</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap');
+
+        body {
+            font-family: 'Mochiy Pop One', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f8ff;
+        }
+
+        #game-container {
+            width: 90%;
+            max-width: 600px;
+            background-color: #ffffff;
+            border-radius: 20px;
+            padding: 20px 30px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        #game-title {
+            color: #ff6347;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        #question-text {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 20px;
+            height: 50px; /* 高さを固定してレイアウトが崩れないようにする */
+        }
+
+        #options-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap; /* 画面が小さい時に折り返す */
+        }
+
+        .animal-option {
+            width: 120px;
+            height: 120px;
+            border: 5px solid #add8e6;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #fff;
+        }
+
+        .animal-option:hover {
+            transform: scale(1.1);
+            border-color: #ff6347;
+        }
+        
+        .animal-option svg {
+            width: 80%;
+            height: 80%;
+        }
+
+        .animal-option.incorrect {
+            opacity: 0.5;
+            border-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .animal-option.correct {
+            border-color: #32cd32;
+            transform: scale(1.15);
+        }
+
+        #feedback-text {
+            font-size: 1.8em;
+            height: 40px;
+            margin-bottom: 20px;
+        }
+
+        #feedback-text.correct {
+            color: #32cd32;
+        }
+
+        #feedback-text.incorrect {
+            color: #ff4500;
+        }
+
+        .game-button {
+            padding: 15px 30px;
+            font-size: 1.5em;
+            font-family: 'Mochiy Pop One', sans-serif;
+            cursor: pointer;
+            border: none;
+            border-radius: 15px;
+            color: white;
+            background-color: #1e90ff;
+            box-shadow: 0 4px #1c86ee;
+            transition: all 0.1s ease;
+        }
+        
+        .game-button:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        #next-button {
+             background-color: #32cd32;
+             box-shadow: 0 4px #2db72d;
+        }
+        
+        #play-again-button {
+             background-color: #ff6347;
+             box-shadow: 0 4px #e5583f;
+        }
+
+    </style>
 </head>
 <body>
-  <div id="startScreen"><button id="startButton">START</button></div>
-  <canvas id="canvas"></canvas>
-  <script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
 
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      ship.y = canvas.height - ship.h - 10;
-    }
-    window.addEventListener('resize', resizeCanvas);
+<div id="game-container">
+    <h1 id="game-title">どうぶつ えいごゲーム</h1>
+    <p id="question-text">ボタンをおしてね！</p>
+    <div id="options-container"></div>
+    <p id="feedback-text"></p>
+    <button id="start-button" class="game-button">スタート！</button>
+    <button id="next-button" class="game-button" style="display: none;">つぎのもんだいへ</button>
+    <button id="play-again-button" class="game-button" style="display: none;">もういっかい！</button>
+</div>
 
-    const balloonColors = ['#FF6666', '#66FF66', '#FFCC66', '#66CCFF', '#FF66CC', '#CCCCFF'];
-    const clouds = [];
-    function initClouds() {
-      clouds.length = 0;
-      for (let i = 0; i < 5; i++) {
-        clouds.push({
-          x: Math.random() * window.innerWidth,
-          y: Math.random() * window.innerHeight * 0.3 + 20,
-          scale: Math.random() * 0.5 + 0.8
-        });
-      }
-    }
-
-    const groups = [
-      'ABCDEFG'.split(''),
-      'HIJKLMNOP'.split(''),
-      'QRSTUVWXYZ'.split('')
+<script>
+    const animalData = [
+        { name: 'Cat', japanese: 'ねこ', svg: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.5 13.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm-7 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm3.5-6c-2.28 0-4.22 1.66-5 3.86.73.19 1.43.44 2.05.74.83-.88 2.01-1.47 3.3-1.47s2.47.59 3.3 1.47c.62-.3 1.32-.55 2.05-.74C16.22 11.16 14.28 9.5 12 9.5zm-3.5-3c.83 0 1.5.67 1.5 1.5S9.33 9.5 8.5 9.5 7 8.83 7 8s.67-1.5 1.5-1.5zm7 0c.83 0 1.5.67 1.5 1.5S16.33 9.5 15.5 9.5 14 8.83 14 8s.67-1.5 1.5-1.5z"/></svg>' },
+        { name: 'Dog', japanese: 'いぬ', svg: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M20.54 17.5c.34-.59.54-1.29.54-2.04 0-2.21-1.79-4-4-4s-4 1.79-4 4c0 .75.2 1.45.54 2.04C10.26 18.6 8 20.69 8 23h2c0-1.65 1.35-3 3-3s3 1.35 3 3h2c0-2.31-2.26-4.4-5.46-5.5.34-.59.54-1.29.54-2.04 0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2c.75 0 1.45-.2 2.04-.54C15.4 18.26 17.31 20 19.5 20c2.21 0 4-1.79 4-4 0-.75-.2-1.45-.54-2.04zM4 6c-1.1 0-2 .9-2 2v1h4V8c0-1.1-.9-2-2-2zm13.5-2c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5zM12 1C5.93 1 1 5.93 1 12s4.93 11 11 11 11-4.93 11-11S18.07 1 12 1z"/></svg>' },
+        { name: 'Pig', japanese: 'ぶた', svg: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2h2v2zm4 0h-2v-2h2v2zm-4-4H9V8h2v4zm4 0h-2V8h2v4zM7.5 14c-.83 0-1.5-.67-1.5-1.5S6.67 11 7.5 11s1.5.67 1.5 1.5S8.33 14 7.5 14zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5S17.33 14 16.5 14z"/></svg>' },
+        { name: 'Lion', japanese: 'ライオン', svg: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2-8c0-.83.67-1.5 1.5-1.5h1c.83 0 1.5.67 1.5 1.5v1h-4v-1zm-3.5-3.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5zm7 0c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5z"/></svg>'},
+        { name: 'Panda', japanese: 'パンダ', svg: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,20c-4.41,0-8-3.59-8-8s3.59-8,8-8 s8,3.59,8,8S16.41,20,12,20z M8.5,12.5c0,1.38,1.12,2.5,2.5,2.5s2.5-1.12,2.5-2.5s-1.12-2.5-2.5-2.5S8.5,11.12,8.5,12.5z M15.5,12.5 c0,1.38,1.12,2.5,2.5,2.5s2.5-1.12,2.5-2.5s-1.12-2.5-2.5-2.5S15.5,11.12,15.5,12.5z M12,10.5c-1.1,0-2-0.9-2-2s0.9-2,2-2 s2,0.9,2,2S13.1,10.5,12,10.5z"/></svg>'}
     ];
 
-    let sounds = {};
-    let wrongSound;
-    function initSounds() {
-      wrongSound = new Audio('wrong.mp3');
-      wrongSound.preload = 'auto';
-      groups.flat().forEach(ch => {
-        const audio = new Audio(ch.toLowerCase() + '.mp3');
-        audio.preload = 'auto';
-        sounds[ch] = audio;
-      });
-    }
+    const questionText = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+    const feedbackText = document.getElementById('feedback-text');
+    const startButton = document.getElementById('start-button');
+    const nextButton = document.getElementById('next-button');
+    const playAgainButton = document.getElementById('play-again-button');
+    
+    let shuffledAnimals = [];
+    let currentQuestionIndex = 0;
+    let synth = window.speechSynthesis;
+    let isAnswered = false;
 
-    let stage = 0, globalNext = 0, wrongCount = 0, gameOver = false;
-    let aliens = [];
-    let startTime;
-
-    const ship = { x: window.innerWidth / 2, y: window.innerHeight - 70, w: 20, h: 60 };
-    const ball = { x: 0, y: 0, r: 8, active: false, bouncing: false, speed: 16, vx: 0, vy: 0, gravity: 0.5 };
-    let alienVelocity = 1.2, dropDistance = 20;
-
-    function loadStage() {
-      ball.active = false;
-      ball.bouncing = false;
-      if (stage >= groups.length) { gameOver = true; return; }
-      if (stage === 0) globalNext = 0;
-      const arr = groups[stage]; aliens = [];
-      if (stage === 0) startTime = Date.now();
-      const perRow = Math.ceil(arr.length / 2);
-      arr.forEach((letter,i) => {
-        const row = Math.floor(i / perRow);
-        const y = 80 + row * 100;
-        let x;
-        const minDist = 120;
-        do { x = Math.random()*(canvas.width-100)+50; }
-        while (aliens.some(a=>Math.abs(a.x-x)<minDist));
-        aliens.push({ letter, x, y, rx:40, ry:60, color: balloonColors[Math.floor(Math.random()*balloonColors.length)] });
-      });
-    }
-
-    function moveAliens() {
-      let hitEdge = false;
-      aliens.forEach(a=>{ a.x+=alienVelocity; if(a.x+a.rx>=canvas.width||a.x-a.rx<=0) hitEdge=true; });
-      if(hitEdge){ alienVelocity*=-1; aliens.forEach(a=>a.y+=dropDistance); }
-    }
-
-    function drawClouds() {
-      ctx.fillStyle='rgba(255,255,255,0.8)';
-      clouds.forEach(c=>{
-        c.x-=0.2; if(c.x<-100) c.x=canvas.width+100;
-        ctx.beginPath();
-        ctx.ellipse(c.x,c.y,30*c.scale,20*c.scale,0,0,2*Math.PI);
-        ctx.ellipse(c.x+40*c.scale,c.y,20*c.scale,15*c.scale,0,0,2*Math.PI);
-        ctx.ellipse(c.x-40*c.scale,c.y,20*c.scale,15*c.scale,0,0,2*Math.PI);
-        ctx.fill();
-      });
-    }
-
-    function drawGameOver() {
-      const elapsed=((Date.now()-startTime)/1000).toFixed(1);
-      ctx.fillStyle='black'; ctx.font='32px sans-serif'; ctx.textAlign='center';
-      ctx.fillText(`CLEAR! ${elapsed}秒  ミス: ${wrongCount}`,canvas.width/2,canvas.height/2);
-    }
-
-    function loop() {
-      if(!gameOver&&aliens.length===0){ stage++; loadStage(); }
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle='#87CEEB'; ctx.fillRect(0,0,canvas.width,canvas.height);
-      drawClouds(); ship.y=canvas.height-ship.h-10;
-      moveAliens();
-      aliens.forEach(a=>{
-        ctx.fillStyle=a.color; ctx.beginPath(); ctx.ellipse(a.x,a.y,a.rx,a.ry,0,0,2*Math.PI); ctx.fill();
-        ctx.fillStyle='#000'; ctx.font='32px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(a.letter,a.x,a.y);
-      });
-      ctx.fillStyle='#0af'; ctx.fillRect(ship.x-ship.w/2,ship.y-ship.h/2,ship.w,ship.h);
-      if(ball.active){
-        if(ball.bouncing){
-          ball.vy+=ball.gravity; ball.x+=ball.vx; ball.y+=ball.vy;
-          ctx.fillStyle='yellow'; ctx.beginPath(); ctx.arc(ball.x,ball.y,ball.r,0,2*Math.PI); ctx.fill();
-          if(ball.x<0||ball.x>canvas.width||ball.y>canvas.height){ ball.active=false; ball.bouncing=false; }
-        } else {
-          ball.y-=ball.speed;
-          ctx.fillStyle='red'; ctx.beginPath(); ctx.arc(ball.x,ball.y,ball.r,0,2*Math.PI); ctx.fill();
-          if(ball.y<0) ball.active=false;
-          aliens.some((a,i)=>{
-            const dx=a.x-ball.x,dy=a.y-ball.y;
-            if(Math.hypot(dx,dy)<Math.max(a.rx,a.ry)){
-              const expected=groups.flat()[globalNext];
-              if(a.letter===expected){ sounds[a.letter].play().catch(()=>{}); aliens.splice(i,1); globalNext++; ball.bouncing=true; ball.vy=-12; ball.vx=0; }
-              else{ wrongSound.play().catch(()=>{}); wrongCount++; ball.active=false; }
-              return true;
-            }
-            return false;
-          });
+    function speak(text) {
+        if (synth.speaking) {
+            synth.cancel();
         }
-      }
-      if(gameOver) drawGameOver(); else requestAnimationFrame(loop);
+        let utterThis = new SpeechSynthesisUtterance(text);
+        utterThis.lang = 'en-US';
+        utterThis.pitch = 1.2;
+        utterThis.rate = 0.9;
+        synth.speak(utterThis);
+    }
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
     }
 
     function startGame() {
-      document.getElementById('startScreen').style.display='none';
-      resizeCanvas(); initClouds(); initSounds(); loadStage(); requestAnimationFrame(loop);
+        startButton.style.display = 'none';
+        playAgainButton.style.display = 'none';
+        feedbackText.textContent = '';
+        currentQuestionIndex = 0;
+        shuffledAnimals = [...animalData];
+        shuffleArray(shuffledAnimals);
+        showQuestion();
     }
-    const btn = document.getElementById('startButton');
-    btn.addEventListener('click', startGame);
-    btn.addEventListener('touchend', startGame);
 
-    let isDragging=false, startOnShip=false;
-    function handleDown(mx,my,id){ if(mx>=ship.x-ship.w/2&&mx<=ship.x+ship.w/2&&my>=ship.y-ship.h/2&&my<=ship.y+ship.h/2){ startOnShip=true; if(id) canvas.setPointerCapture(id);} }
-    function handleMove(mx){ if(startOnShip){ isDragging=true; ship.x=mx;} }
-    function handleUp(){ if(startOnShip&&!isDragging&&!ball.active&&!gameOver){ ball.active=true; ball.x=ship.x; ball.y=ship.y-ship.h/2;} isDragging=false; startOnShip=false; }
-    canvas.addEventListener('pointerdown',e=>{ e.preventDefault(); handleDown(e.offsetX,e.offsetY,e.pointerId); });
-    canvas.addEventListener('pointermove',e=>{ e.preventDefault(); handleMove(e.offsetX); });
-    canvas.addEventListener('pointerup',e=>{ e.preventDefault(); handleUp(); canvas.releasePointerCapture(e.pointerId); });
-    canvas.addEventListener('touchstart',e=>{ e.preventDefault(); const t=e.changedTouches[0]; handleDown(t.clientX,t.clientY); });
-    canvas.addEventListener('touchmove',e=>{ e.preventDefault(); const t=e.changedTouches[0]; handleMove(t.clientX); });
-    canvas.addEventListener('touchend',e=>{ e.preventDefault(); handleUp(); });
+    function showQuestion() {
+        isAnswered = false;
+        nextButton.style.display = 'none';
+        optionsContainer.innerHTML = '';
+        feedbackText.textContent = '';
+        feedbackText.className = '';
 
-    resizeCanvas();
-  </script>
+        const currentAnimal = shuffledAnimals[currentQuestionIndex];
+        
+        questionText.textContent = `「${currentAnimal.name}」はどーこだ？`;
+        speak(currentAnimal.name);
+
+        const options = [];
+        options.push(currentAnimal);
+
+        const otherAnimals = animalData.filter(animal => animal.name !== currentAnimal.name);
+        shuffleArray(otherAnimals);
+        
+        options.push(otherAnimals[0]);
+        options.push(otherAnimals[1]);
+        
+        shuffleArray(options);
+
+        options.forEach(animal => {
+            const optionElement = document.createElement('div');
+            optionElement.classList.add('animal-option');
+            optionElement.dataset.name = animal.name;
+            optionElement.innerHTML = animal.svg;
+            optionElement.addEventListener('click', selectAnswer);
+            optionsContainer.appendChild(optionElement);
+        });
+    }
+
+    function selectAnswer(event) {
+        if (isAnswered) return;
+
+        const selectedOption = event.currentTarget;
+        const selectedName = selectedOption.dataset.name;
+        const correctName = shuffledAnimals[currentQuestionIndex].name;
+
+        if (selectedName === correctName) {
+            isAnswered = true;
+            feedbackText.textContent = 'Correct! せいかい！';
+            feedbackText.className = 'correct';
+            selectedOption.classList.add('correct');
+            
+            Array.from(optionsContainer.children).forEach(child => {
+                child.style.cursor = 'not-allowed';
+            });
+            
+            setTimeout(() => {
+                 nextButton.style.display = 'inline-block';
+            }, 500);
+
+        } else {
+            feedbackText.textContent = 'Try Again! ちがうよ';
+            feedbackText.className = 'incorrect';
+            selectedOption.classList.add('incorrect');
+            selectedOption.removeEventListener('click', selectAnswer);
+        }
+    }
+    
+    function nextQuestion() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < shuffledAnimals.length) {
+            showQuestion();
+        } else {
+            endGame();
+        }
+    }
+    
+    function endGame() {
+        questionText.textContent = 'ぜんぶクリア！';
+        optionsContainer.innerHTML = '🎉';
+        feedbackText.textContent = 'よくできました！';
+        feedbackText.className = 'correct';
+        nextButton.style.display = 'none';
+        playAgainButton.style.display = 'inline-block';
+    }
+
+    startButton.addEventListener('click', startGame);
+    nextButton.addEventListener('click', nextQuestion);
+    playAgainButton.addEventListener('click', startGame);
+
+</script>
+
 </body>
 </html>
