@@ -30,6 +30,7 @@
             padding: 20px 30px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.1);
             text-align: center;
+            transition: opacity 0.3s ease;
         }
 
         #game-title {
@@ -109,20 +110,17 @@
         #feedback-text.incorrect {
             color: #ff4500;
         }
-
-        /* ★修正点2: ボタンを中央に配置するためのCSS */
+        
         #button-wrapper {
-            position: relative; /* 子要素を絶対位置で配置するための基準点にする */
+            position: relative;
             min-height: 75px;
         }
 
         .game-button {
-            /* ★修正点2: ボタンを重ねて中央に配置する設定 */
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            
             padding: 15px 30px;
             font-size: 1.5em;
             font-family: 'Mochiy Pop One', sans-serif;
@@ -133,11 +131,10 @@
             background-color: #1e90ff;
             box-shadow: 0 4px #1c86ee;
             transition: all 0.1s ease;
-            margin: 5px;
         }
         
         .game-button:active {
-            transform: translate(-50%, calc(-50% + 4px)); /* active時の動きも調整 */
+            transform: translate(-50%, calc(-50% + 4px));
             box-shadow: none;
         }
         
@@ -154,6 +151,53 @@
              background-color: #ff6347;
              box-shadow: 0 4px #e5583f;
         }
+
+        /* ★修正点1: ご褒美アニメーション用のCSSを追加 */
+        #reward-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none; /* 表示されてないときはクリックさせない */
+            transition: opacity 0.3s ease-in-out;
+        }
+        #reward-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #reward-stars {
+            display: flex;
+            gap: 20px;
+        }
+
+        .reward-star {
+            width: 150px;
+            height: auto;
+            transform: scale(0); /* 最初は見えないように小さく */
+        }
+
+        .reward-star.animate {
+            animation: pop-in 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+        }
+
+        @keyframes pop-in {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
         
         @media (max-width: 600px) {
             #game-container { padding: 15px; }
@@ -164,28 +208,32 @@
             #feedback-text { font-size: 1.5em; height: 40px; }
             .game-button { font-size: 1.2em; padding: 12px 25px; }
             #button-wrapper { min-height: 65px; }
+            .reward-star { width: 100px; }
         }
         
         @media (max-width: 380px) {
             .animal-option { width: 95px; height: 95px; }
+            .reward-star { width: 80px; }
         }
 
     </style>
 </head>
 <body>
-
-<div id="game-container">
-    <h1 id="game-title">りくのどうぶつ えいごゲーム</h1>
-    <p id="question-text">ボタンをおしてね！</p>
-    <div id="options-container"></div>
-    <p id="feedback-text"></p>
-
-    <div id="button-wrapper">
-        <button id="start-button" class="game-button">スタート！</button>
-        <button id="next-button" class="game-button">つぎのもんだいへ</button>
-        <button id="play-again-button" class="game-button">もういっかい！</button>
+    <div id="game-container">
+        <h1 id="game-title">りくのどうぶつ えいごゲーム</h1>
+        <p id="question-text">ボタンをおしてね！</p>
+        <div id="options-container"></div>
+        <p id="feedback-text"></p>
+        <div id="button-wrapper">
+            <button id="start-button" class="game-button">スタート！</button>
+            <button id="next-button" class="game-button">つぎのもんだいへ</button>
+            <button id="play-again-button" class="game-button">もういっかい！</button>
+        </div>
     </div>
-</div>
+
+    <div id="reward-overlay">
+        <div id="reward-stars"></div>
+    </div>
 
 <script>
     const animalData = [
@@ -201,12 +249,15 @@
         { name: 'Rabbit', japanese: 'うさぎ', image: 'landanimal/images/rabbit.png' }
     ];
 
+    const gameContainer = document.getElementById('game-container');
     const questionText = document.getElementById('question-text');
     const optionsContainer = document.getElementById('options-container');
     const feedbackText = document.getElementById('feedback-text');
     const startButton = document.getElementById('start-button');
     const nextButton = document.getElementById('next-button');
     const playAgainButton = document.getElementById('play-again-button');
+    const rewardOverlay = document.getElementById('reward-overlay');
+    const rewardStarsContainer = document.getElementById('reward-stars');
     
     let shuffledAnimals = [];
     let currentQuestionIndex = 0;
@@ -241,6 +292,7 @@
 
     function startGame() {
         score = 0;
+        gameContainer.style.opacity = 1;
         startButton.classList.add('hidden');
         playAgainButton.classList.add('hidden');
         nextButton.classList.add('hidden');
@@ -257,22 +309,16 @@
         optionsContainer.innerHTML = '';
         feedbackText.textContent = '';
         feedbackText.className = '';
-
-        const currentAnimal = shuffledAnimals[currentQuestionIndex];
-        
-        // ★修正点1: 問題文を変更
         questionText.textContent = 'よーくきいて さがしてね！';
-        speak(currentAnimal.name);
-
-        const options = [];
-        options.push(currentAnimal);
-
+        speak(shuffledAnimals[currentQuestionIndex].name);
+        // (以下、選択肢作成のコードは変更なし)
+        const currentAnimal = shuffledAnimals[currentQuestionIndex];
+        const options = [currentAnimal];
         const otherAnimals = animalData.filter(animal => animal.name !== currentAnimal.name);
         shuffleArray(otherAnimals);
         options.push(otherAnimals[0]);
         options.push(otherAnimals[1]);
         shuffleArray(options);
-
         options.forEach(animal => {
             const optionElement = document.createElement('div');
             optionElement.classList.add('animal-option');
@@ -289,15 +335,12 @@
     function selectAnswer(event) {
         if (isAnswered) return;
         isAnswered = true;
-
         const selectedOption = event.currentTarget;
         const selectedName = selectedOption.dataset.name;
         const correctName = shuffledAnimals[currentQuestionIndex].name;
-
         Array.from(optionsContainer.children).forEach(child => {
             child.style.pointerEvents = 'none';
         });
-
         if (selectedName === correctName) {
             score++;
             feedbackText.textContent = 'Correct! せいかい！';
@@ -312,7 +355,6 @@
                 correctOption.classList.add('correct');
             }
         }
-        
         setTimeout(() => {
              nextButton.classList.remove('hidden');
         }, 1500);
@@ -327,25 +369,72 @@
         }
     }
     
+    // ★修正点2: ゲーム終了時の処理をアニメーション対応に大幅変更
     function endGame() {
-        questionText.textContent = 'ぜんぶクリア！';
-        optionsContainer.innerHTML = '<span style="font-size: 5em;">🎉</span>';
-        
-        const resultMessageForDisplay = `きみは ${score}もん せいかいしたよ！`;
-        const resultMessageForSpeech = `${score}問正解したよ`;
-
-        feedbackText.textContent = resultMessageForDisplay;
-        feedbackText.className = 'correct';
+        gameContainer.style.opacity = 0; // ゲーム画面をフェードアウト
         
         setTimeout(() => {
-            speakJapanese(resultMessageForSpeech);
-        }, 500);
+            // アニメーションの準備
+            let starCount = 0;
+            if (score === 10) {
+                starCount = 3;
+            } else if (score >= 7) {
+                starCount = 2;
+            } else if (score >= 3) {
+                starCount = 1;
+            }
 
-        nextButton.classList.add('hidden');
-        playAgainButton.classList.remove('hidden');
+            rewardStarsContainer.innerHTML = ''; // 前の星を消去
+
+            for (let i = 0; i < starCount; i++) {
+                const starImg = document.createElement('img');
+                starImg.src = 'landanimal/images/star.png'; // 星画像のパス
+                starImg.classList.add('reward-star');
+                // 1つずつ時間差でアニメーション開始
+                starImg.style.animationDelay = `${i * 0.4}s`;
+                rewardStarsContainer.appendChild(starImg);
+            }
+            
+            rewardOverlay.classList.add('visible');
+
+            // 星のアニメーションを開始
+            setTimeout(() => {
+                const stars = document.querySelectorAll('.reward-star');
+                stars.forEach(star => star.classList.add('animate'));
+            }, 100);
+
+            // アニメーションが終わるのを待つ
+            const totalAnimationTime = starCount * 400 + 1500; // 星の表示時間 + 余韻
+            setTimeout(() => {
+                rewardOverlay.classList.remove('visible');
+                
+                // ゲーム画面を再表示して最終結果を見せる
+                gameContainer.style.opacity = 1;
+                questionText.textContent = 'おつかれさま！';
+                optionsContainer.innerHTML = '<span style="font-size: 5em;">🎉</span>';
+                
+                let resultMessageForDisplay = `きみは ${score}もん せいかいしたよ！`;
+                let resultMessageForSpeech = `${score}問正解したよ`;
+
+                if (starCount === 0 && score > 0) {
+                     resultMessageForDisplay = `がんばったね！ ${score}もんせいかい！`;
+                     resultMessageForSpeech = `がんばったね！${score}問正解！`;
+                } else if (score === 0) {
+                    resultMessageForDisplay = 'またチャレンジしてね！';
+                    resultMessageForSpeech = 'またチャレンジしてね！';
+                }
+
+                feedbackText.textContent = resultMessageForDisplay;
+                feedbackText.className = 'correct';
+                speakJapanese(resultMessageForSpeech);
+
+                nextButton.classList.add('hidden');
+                playAgainButton.classList.remove('hidden');
+            }, totalAnimationTime);
+
+        }, 500); // ゲーム画面が消えるのを待つ
     }
     
-    // ページ読み込み完了時にボタンの初期状態を設定
     document.addEventListener('DOMContentLoaded', () => {
         nextButton.classList.add('hidden');
         playAgainButton.classList.add('hidden');
@@ -357,6 +446,5 @@
     playAgainButton.addEventListener('click', startGame);
 
 </script>
-
 </body>
 </html>
