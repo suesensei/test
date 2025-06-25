@@ -12,8 +12,9 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            padding: 20px 0;
             background-color: #f0f8ff;
         }
 
@@ -38,12 +39,15 @@
             color: #333;
             margin-bottom: 20px;
             height: 50px; /* 高さを固定してレイアウトが崩れないようにする */
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #options-container {
             display: flex;
             justify-content: center;
-            gap: 20px;
+            gap: 15px;
             margin-bottom: 20px;
             flex-wrap: wrap; /* 画面が小さい時に折り返す */
         }
@@ -59,6 +63,9 @@
             justify-content: center;
             align-items: center;
             background-color: #fff;
+            overflow: hidden;
+            padding: 5px;
+            box-sizing: border-box;
         }
 
         .animal-option:hover {
@@ -66,15 +73,17 @@
             border-color: #ff6347;
         }
         
-        .animal-option svg {
-            width: 80%;
-            height: 80%;
+        .animal-option img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
         }
 
         .animal-option.incorrect {
             opacity: 0.5;
             border-color: #ccc;
             cursor: not-allowed;
+            transform: scale(1);
         }
         
         .animal-option.correct {
@@ -139,12 +148,18 @@
 </div>
 
 <script>
+    // 提供された10種類の動物の画像データに更新
     const animalData = [
-        { name: 'Cat', japanese: 'ねこ', svg: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.5 13.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm-7 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm3.5-6c-2.28 0-4.22 1.66-5 3.86.73.19 1.43.44 2.05.74.83-.88 2.01-1.47 3.3-1.47s2.47.59 3.3 1.47c.62-.3 1.32-.55 2.05-.74C16.22 11.16 14.28 9.5 12 9.5zm-3.5-3c.83 0 1.5.67 1.5 1.5S9.33 9.5 8.5 9.5 7 8.83 7 8s.67-1.5 1.5-1.5zm7 0c.83 0 1.5.67 1.5 1.5S16.33 9.5 15.5 9.5 14 8.83 14 8s.67-1.5 1.5-1.5z"/></svg>' },
-        { name: 'Dog', japanese: 'いぬ', svg: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M20.54 17.5c.34-.59.54-1.29.54-2.04 0-2.21-1.79-4-4-4s-4 1.79-4 4c0 .75.2 1.45.54 2.04C10.26 18.6 8 20.69 8 23h2c0-1.65 1.35-3 3-3s3 1.35 3 3h2c0-2.31-2.26-4.4-5.46-5.5.34-.59.54-1.29.54-2.04 0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2c.75 0 1.45-.2 2.04-.54C15.4 18.26 17.31 20 19.5 20c2.21 0 4-1.79 4-4 0-.75-.2-1.45-.54-2.04zM4 6c-1.1 0-2 .9-2 2v1h4V8c0-1.1-.9-2-2-2zm13.5-2c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5zM12 1C5.93 1 1 5.93 1 12s4.93 11 11 11 11-4.93 11-11S18.07 1 12 1z"/></svg>' },
-        { name: 'Pig', japanese: 'ぶた', svg: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2h2v2zm4 0h-2v-2h2v2zm-4-4H9V8h2v4zm4 0h-2V8h2v4zM7.5 14c-.83 0-1.5-.67-1.5-1.5S6.67 11 7.5 11s1.5.67 1.5 1.5S8.33 14 7.5 14zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5S17.33 14 16.5 14z"/></svg>' },
-        { name: 'Lion', japanese: 'ライオン', svg: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2-8c0-.83.67-1.5 1.5-1.5h1c.83 0 1.5.67 1.5 1.5v1h-4v-1zm-3.5-3.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5zm7 0c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5z"/></svg>'},
-        { name: 'Panda', japanese: 'パンダ', svg: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,20c-4.41,0-8-3.59-8-8s3.59-8,8-8 s8,3.59,8,8S16.41,20,12,20z M8.5,12.5c0,1.38,1.12,2.5,2.5,2.5s2.5-1.12,2.5-2.5s-1.12-2.5-2.5-2.5S8.5,11.12,8.5,12.5z M15.5,12.5 c0,1.38,1.12,2.5,2.5,2.5s2.5-1.12,2.5-2.5s-1.12-2.5-2.5-2.5S15.5,11.12,15.5,12.5z M12,10.5c-1.1,0-2-0.9-2-2s0.9-2,2-2 s2,0.9,2,2S13.1,10.5,12,10.5z"/></svg>'}
+        { name: 'Bear', japanese: 'くま', image: 'landanimal/images/bear.png' },
+        { name: 'Cow', japanese: 'うし', image: 'landanimal/images/cow.png' },
+        { name: 'Elephant', japanese: 'ぞう', image: 'landanimal/images/elephant.png' },
+        { name: 'Giraffe', japanese: 'きりん', image: 'landanimal/images/giraffe.png' },
+        { name: 'Goat', japanese: 'やぎ', image: 'landanimal/images/goat.png' },
+        { name: 'Horse', japanese: 'うま', image: 'landanimal/images/horse.png' },
+        { name: 'Koala', japanese: 'コアラ', image: 'landanimal/images/koala.png' },
+        { name: 'Monkey', japanese: 'さる', image: 'landanimal/images/monkey.png' },
+        { name: 'Mouse', japanese: 'ねずみ', image: 'landanimal/images/mouse.png' },
+        { name: 'Rabbit', japanese: 'うさぎ', image: 'landanimal/images/rabbit.png' }
     ];
 
     const questionText = document.getElementById('question-text');
@@ -159,17 +174,20 @@
     let synth = window.speechSynthesis;
     let isAnswered = false;
 
+    // ブラウザの音声合成APIで英語を発音する関数
     function speak(text) {
+        // もし音声が再生中ならキャンセルする
         if (synth.speaking) {
             synth.cancel();
         }
         let utterThis = new SpeechSynthesisUtterance(text);
-        utterThis.lang = 'en-US';
-        utterThis.pitch = 1.2;
-        utterThis.rate = 0.9;
+        utterThis.lang = 'en-US'; // アメリカ英語に設定
+        utterThis.pitch = 1.2;    // 少し高めの声に
+        utterThis.rate = 0.9;     // 少しゆっくりめに
         synth.speak(utterThis);
     }
 
+    // 配列をシャッフルする関数（Fisher-Yatesアルゴリズム）
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -177,6 +195,7 @@
         }
     }
 
+    // ゲームを開始する関数
     function startGame() {
         startButton.style.display = 'none';
         playAgainButton.style.display = 'none';
@@ -187,6 +206,7 @@
         showQuestion();
     }
 
+    // 問題を表示する関数
     function showQuestion() {
         isAnswered = false;
         nextButton.style.display = 'none';
@@ -199,6 +219,7 @@
         questionText.textContent = `「${currentAnimal.name}」はどーこだ？`;
         speak(currentAnimal.name);
 
+        // 選択肢を作成（正解1つ、不正解2つ）
         const options = [];
         options.push(currentAnimal);
 
@@ -210,18 +231,25 @@
         
         shuffleArray(options);
 
+        // 画面に選択肢の画像を表示
         options.forEach(animal => {
             const optionElement = document.createElement('div');
             optionElement.classList.add('animal-option');
             optionElement.dataset.name = animal.name;
-            optionElement.innerHTML = animal.svg;
+            
+            const imgElement = document.createElement('img');
+            imgElement.src = animal.image;
+            imgElement.alt = animal.japanese;
+            
+            optionElement.appendChild(imgElement);
             optionElement.addEventListener('click', selectAnswer);
             optionsContainer.appendChild(optionElement);
         });
     }
 
+    // 回答を選択したときの処理
     function selectAnswer(event) {
-        if (isAnswered) return;
+        if (isAnswered) return; // すでに回答済みの場合は何もしない
 
         const selectedOption = event.currentTarget;
         const selectedName = selectedOption.dataset.name;
@@ -233,10 +261,12 @@
             feedbackText.className = 'correct';
             selectedOption.classList.add('correct');
             
+            // 全ての選択肢をクリックできないようにする
             Array.from(optionsContainer.children).forEach(child => {
-                child.style.cursor = 'not-allowed';
+                child.style.pointerEvents = 'none';
             });
             
+            // 少し待ってから「つぎへ」ボタンを表示
             setTimeout(() => {
                  nextButton.style.display = 'inline-block';
             }, 500);
@@ -245,10 +275,12 @@
             feedbackText.textContent = 'Try Again! ちがうよ';
             feedbackText.className = 'incorrect';
             selectedOption.classList.add('incorrect');
-            selectedOption.removeEventListener('click', selectAnswer);
+            // 間違えた選択肢はもうクリックできないようにする
+            selectedOption.style.pointerEvents = 'none';
         }
     }
     
+    // 次の問題へ進む
     function nextQuestion() {
         currentQuestionIndex++;
         if (currentQuestionIndex < shuffledAnimals.length) {
@@ -258,15 +290,17 @@
         }
     }
     
+    // ゲーム終了時の処理
     function endGame() {
         questionText.textContent = 'ぜんぶクリア！';
-        optionsContainer.innerHTML = '🎉';
+        optionsContainer.innerHTML = '<span style="font-size: 5em;">🎉</span>';
         feedbackText.textContent = 'よくできました！';
         feedbackText.className = 'correct';
         nextButton.style.display = 'none';
         playAgainButton.style.display = 'inline-block';
     }
 
+    // ボタンにイベントリスナーを設定
     startButton.addEventListener('click', startGame);
     nextButton.addEventListener('click', nextQuestion);
     playAgainButton.addEventListener('click', startGame);
